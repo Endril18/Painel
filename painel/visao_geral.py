@@ -10,9 +10,13 @@ from painel.mapas import (
     adicionar_municipios_paraiba,
     aplicar_layout_mapa,
 )
+from painel.tema import aplicar_tema_grafico
 
 
-def renderizar(df, ano, indicador_label, indicador, tipo, gres_sel, mun_sel, busca):
+def renderizar(
+    df, ano, indicador_label, indicador, tipo, gres_sel, mun_sel, busca,
+    modo_escuro=False,
+):
     coluna, unidade, melhor_maior, so_anos_ideb = indicador
     d = df[df["NU_ANO_CENSO"] == ano].copy()
     if tipo != "Todas":
@@ -76,7 +80,7 @@ def renderizar(df, ano, indicador_label, indicador, tipo, gres_sel, mun_sel, bus
     d_map["HOVER"] = [texto_hover(r) for r in d_map.itertuples()]
 
     fig = go.Figure()
-    adicionar_municipios_paraiba(fig)
+    adicionar_municipios_paraiba(fig, modo_escuro)
     sem_valor = d_map[d_map["VALOR"].isna()]
     com_valor = d_map[d_map["VALOR"].notna()]
 
@@ -110,7 +114,9 @@ def renderizar(df, ano, indicador_label, indicador, tipo, gres_sel, mun_sel, bus
                 hoverinfo="text",
             )
         )
-    aplicar_layout_mapa(fig, PB_CENTRO, 6.6, 560, estilo="white-bg")
+    aplicar_layout_mapa(
+        fig, PB_CENTRO, 6.6, 560, estilo="white-bg", modo_escuro=modo_escuro
+    )
     st.plotly_chart(fig, use_container_width=True)
 
     notas = []
@@ -143,7 +149,7 @@ def renderizar(df, ano, indicador_label, indicador, tipo, gres_sel, mun_sel, bus
 
     col_dist, col_rank = st.columns(2)
     with col_dist:
-        st.subheader("Distribuição do indicador")
+        st.subheader("Distribuição de Ofertas")
         hist = px.histogram(
             d_ind,
             x=coluna,
@@ -154,7 +160,11 @@ def renderizar(df, ano, indicador_label, indicador, tipo, gres_sel, mun_sel, bus
             barmode="overlay",
             opacity=0.65,
         )
-        hist.update_layout(height=380, margin=dict(l=0, r=0, t=10, b=0), yaxis_title="Escolas")
+        hist.update_layout(
+            height=450,
+            margin=dict(l=0, r=0, t=40, b=0),
+            yaxis_title="Escolas")
+        aplicar_tema_grafico(hist, modo_escuro)
         if coluna == "IDEB":
             hist.add_vline(
                 x=REF_IDEB,
@@ -166,8 +176,7 @@ def renderizar(df, ano, indicador_label, indicador, tipo, gres_sel, mun_sel, bus
         st.plotly_chart(hist, use_container_width=True)
 
     with col_rank:
-        st.subheader("Ranking")
-        n_rank = min(10, n_com_dado)
+        st.subheader("Panorama Estadual — Ranking Municipal")
         tabela_base = d_ind[["NO_ENTIDADE", "NO_MUNICIPIO", "GRE", "TIPO_OFERTA", coluna]].rename(
             columns={
                 "NO_ENTIDADE": "Escola",
@@ -176,24 +185,18 @@ def renderizar(df, ano, indicador_label, indicador, tipo, gres_sel, mun_sel, bus
                 coluna: indicador_label,
             }
         )
-        aba_maior, aba_menor = st.tabs(
-            [f"{n_rank} maiores valores", f"{n_rank} menores valores"]
-        )
         cfg = {indicador_label: st.column_config.NumberColumn(format="%.2f")}
-        with aba_maior:
-            st.dataframe(
-                tabela_base.nlargest(n_rank, indicador_label),
-                hide_index=True,
-                use_container_width=True,
-                column_config=cfg,
-            )
-        with aba_menor:
-            st.dataframe(
-                tabela_base.nsmallest(n_rank, indicador_label),
-                hide_index=True,
-                use_container_width=True,
-                column_config=cfg,
-            )
+        st.dataframe(
+            tabela_base.sort_values(
+                indicador_label,
+                ascending=melhor_maior is False,
+                kind="stable",
+            ),
+            hide_index=True,
+            use_container_width=True,
+            height="auto",
+            column_config=cfg,
+        )
         if melhor_maior is False:
             st.caption("Neste indicador, valores menores indicam melhor situação.")
         elif melhor_maior is None:

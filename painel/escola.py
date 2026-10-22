@@ -15,9 +15,10 @@ from painel.config import (
 )
 from painel.dados import formatar
 from painel.mapas import ScatterMap, aplicar_layout_mapa
+from painel.tema import aplicar_tema_grafico
 
 
-def renderizar(df, anos):
+def renderizar(df, anos, modo_escuro=False):
     ultimo = df.sort_values("NU_ANO_CENSO").groupby("CO_ENTIDADE").tail(1)
     ano_max = max(anos)
     rotulos = {}
@@ -99,6 +100,7 @@ def renderizar(df, anos):
                 {"lat": esc["LATITUDE"], "lon": esc["LONGITUDE"]},
                 12,
                 300,
+                modo_escuro=modo_escuro,
             )
             st.plotly_chart(fm, use_container_width=True)
             if esc["COORD_APROX"] == 1:
@@ -149,6 +151,7 @@ def renderizar(df, anos):
         yaxis_title=ind_label,
         legend=dict(orientation="h", y=-0.2),
     )
+    aplicar_tema_grafico(fh, modo_escuro)
     st.plotly_chart(fh, use_container_width=True)
     if serie_escola.notna().sum() == 0:
         st.caption("A escola não tem dado deste indicador em nenhum ano.")
@@ -224,4 +227,5 @@ def renderizar(df, anos):
         xaxis=dict(dtick=1),
         legend=dict(orientation="h", y=-0.2),
     )
+    aplicar_tema_grafico(ft, modo_escuro)
     st.plotly_chart(ft, use_container_width=True)

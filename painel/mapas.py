@@ -22,19 +22,21 @@ def carregar_municipios_paraiba():
     return geojson
 
 
-def adicionar_municipios_paraiba(fig):
+def adicionar_municipios_paraiba(fig, modo_escuro=False):
     geojson = carregar_municipios_paraiba()
     ids = [feature["properties"]["id"] for feature in geojson["features"]]
+    cor_municipio = "#242832" if modo_escuro else "#feffff"
+    cor_borda = "#596273" if modo_escuro else "#9aa8b5"
     fig.add_trace(
         ChoroplethMap(
             geojson=geojson,
             locations=ids,
             z=[0] * len(ids),
             featureidkey="properties.id",
-            colorscale=[[0, "#f3f6f9"], [1, "#f3f6f9"]],
+            colorscale=[[0, cor_municipio], [1, cor_municipio]],
             zmin=0,
             zmax=1,
-            marker_line_color="#9aa8b5",
+            marker_line_color=cor_borda,
             marker_line_width=0.5,
             showscale=False,
             hoverinfo="skip",
@@ -43,13 +45,24 @@ def adicionar_municipios_paraiba(fig):
     )
 
 
-def aplicar_layout_mapa(fig, centro, zoom, altura, estilo="open-street-map"):
+def aplicar_layout_mapa(
+    fig, centro, zoom, altura, estilo="open-street-map", modo_escuro=False
+):
+    if modo_escuro:
+        estilo = "carto-darkmatter"
     cfg = dict(style=estilo, center=centro, zoom=zoom)
     if USA_MAP_NOVO:
         fig.update_layout(map=cfg)
     else:
         fig.update_layout(mapbox=cfg)
-    fig.update_layout(height=altura, margin=dict(l=0, r=0, t=0, b=0), showlegend=False)
-
+    cor_fundo = "#0e1117" if modo_escuro else "#ffffff"
+    fig.update_layout(
+        height=altura,
+        margin=dict(l=0, r=0, t=0, b=0),
+        showlegend=False,
+        paper_bgcolor=cor_fundo,
+        plot_bgcolor=cor_fundo,
+        font_color="#fafafa" if modo_escuro else "#1f2937",
+    )
 
 

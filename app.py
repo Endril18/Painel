@@ -9,10 +9,14 @@ import streamlit as st
 from painel.config import INDICADORES
 from painel.dados import carregar_dados
 from painel.escola import renderizar as renderizar_escola
+from painel.tema import aplicar_estilos
 from painel.visao_geral import renderizar as renderizar_visao_geral
 
 
 st.set_page_config(page_title="Ensino Médio da Paraíba", page_icon="🏫", layout="wide")
+
+modo_escuro = st.sidebar.toggle("Modo escuro", key="modo_escuro")
+aplicar_estilos(modo_escuro)
 
 try:
     df, _ = carregar_dados()
@@ -56,7 +60,8 @@ st.caption(
 tab_geral, tab_escola = st.tabs(["Visão geral", "Escola"])
 with tab_geral:
     renderizar_visao_geral(
-        df, ano, indicador_label, indicador, tipo, gres_sel, mun_sel, busca
+        df, ano, indicador_label, indicador, tipo, gres_sel, mun_sel, busca,
+        modo_escuro,
     )
 with tab_escola:
-    renderizar_escola(df, anos)
+    renderizar_escola(df, anos, modo_escuro)
