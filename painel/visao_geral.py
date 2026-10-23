@@ -10,12 +10,10 @@ from painel.mapas import (
     adicionar_municipios_paraiba,
     aplicar_layout_mapa,
 )
-from painel.tema import aplicar_tema_grafico
 
 
 def renderizar(
     df, ano, indicador_label, indicador, tipo, gres_sel, mun_sel, busca,
-    modo_escuro=False,
 ):
     coluna, unidade, melhor_maior, so_anos_ideb = indicador
     d = df[df["NU_ANO_CENSO"] == ano].copy()
@@ -80,7 +78,7 @@ def renderizar(
     d_map["HOVER"] = [texto_hover(r) for r in d_map.itertuples()]
 
     fig = go.Figure()
-    adicionar_municipios_paraiba(fig, modo_escuro)
+    adicionar_municipios_paraiba(fig)
     sem_valor = d_map[d_map["VALOR"].isna()]
     com_valor = d_map[d_map["VALOR"].notna()]
 
@@ -115,7 +113,7 @@ def renderizar(
             )
         )
     aplicar_layout_mapa(
-        fig, PB_CENTRO, 6.6, 560, estilo="white-bg", modo_escuro=modo_escuro
+        fig, PB_CENTRO, 6.6, 560, estilo="white-bg"
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -161,10 +159,10 @@ def renderizar(
             opacity=0.65,
         )
         hist.update_layout(
+            template="plotly_white",
             height=450,
             margin=dict(l=0, r=0, t=40, b=0),
             yaxis_title="Escolas")
-        aplicar_tema_grafico(hist, modo_escuro)
         if coluna == "IDEB":
             hist.add_vline(
                 x=REF_IDEB,

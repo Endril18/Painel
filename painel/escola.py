@@ -15,10 +15,9 @@ from painel.config import (
 )
 from painel.dados import formatar
 from painel.mapas import ScatterMap, aplicar_layout_mapa
-from painel.tema import aplicar_tema_grafico
 
 
-def renderizar(df, anos, modo_escuro=False):
+def renderizar(df, anos):
     ultimo = df.sort_values("NU_ANO_CENSO").groupby("CO_ENTIDADE").tail(1)
     ano_max = max(anos)
     rotulos = {}
@@ -100,7 +99,6 @@ def renderizar(df, anos, modo_escuro=False):
                 {"lat": esc["LATITUDE"], "lon": esc["LONGITUDE"]},
                 12,
                 300,
-                modo_escuro=modo_escuro,
             )
             st.plotly_chart(fm, use_container_width=True)
             if esc["COORD_APROX"] == 1:
@@ -145,13 +143,14 @@ def renderizar(df, anos, modo_escuro=False):
             annotation_text=f"Referência {str(REF_IDEB).replace('.', ',')}",
         )
     fh.update_layout(
+        template="plotly_white",
         height=380,
         margin=dict(l=0, r=0, t=10, b=0),
         xaxis=dict(dtick=1, title=None),
         yaxis_title=ind_label,
         legend=dict(orientation="h", y=-0.2),
     )
-    aplicar_tema_grafico(fh, modo_escuro)
+
     st.plotly_chart(fh, use_container_width=True)
     if serie_escola.notna().sum() == 0:
         st.caption("A escola não tem dado deste indicador em nenhum ano.")
@@ -159,7 +158,6 @@ def renderizar(df, anos, modo_escuro=False):
         st.caption(
             "Este indicador só existe nos anos de aplicação do IDEB "
             "(2017, 2019, 2021, 2023, 2025); as linhas ligam os anos com dado. "
-            "A cobertura de 2021 é baixa."
         )
 
     st.subheader(f"Comparação em {ano_f}")
@@ -222,10 +220,11 @@ def renderizar(df, anos, modo_escuro=False):
         labels={"NU_ANO_CENSO": ""},
     )
     ft.update_layout(
+        template="plotly_white",
         height=320,
         margin=dict(l=0, r=0, t=10, b=0),
         xaxis=dict(dtick=1),
         legend=dict(orientation="h", y=-0.2),
     )
-    aplicar_tema_grafico(ft, modo_escuro)
+
     st.plotly_chart(ft, use_container_width=True)

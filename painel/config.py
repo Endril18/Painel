@@ -30,7 +30,6 @@ FICHA = [
     ("Alunos por docente", "ALUNOS_POR_DOCENTE", "", 1),
     ("Matrículas em tempo integral", "PCT_INT", "%", 0),
     ("Computadores por 100 alunos", "COMPUTADORES_ALUNO_P100", "", 1),
-    ("Salas climatizadas", "PCT_SALAS_CLIMATIZADAS", "%", 0),
     ("Nota de infraestrutura (0-100)", "IDX_INFRAESTRUTURA", "", 0),
     ("Nota de tecnologia (0-100)", "IDX_TECNOLOGIA", "", 0),
 ]
