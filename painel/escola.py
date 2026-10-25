@@ -11,7 +11,7 @@ from painel.config import (
     FICHA,
     INDICADORES,
     LOCALIZACAO,
-    REF_IDEB,
+    METAS_IDEB,
 )
 from painel.dados import formatar
 from painel.mapas import ScatterMap, aplicar_layout_mapa
@@ -136,11 +136,12 @@ def renderizar(df, anos):
             )
         )
     if ind_col == "IDEB":
+        ref_ideb = METAS_IDEB.get(max(anos), 4.4)
         fh.add_hline(
-            y=REF_IDEB,
+            y=ref_ideb,
             line_dash="dot",
             line_color="#999",
-            annotation_text=f"Referência {str(REF_IDEB).replace('.', ',')}",
+            annotation_text=f"Referência {str(ref_ideb).replace('.', ',')}",
         )
     fh.update_layout(
         template="plotly_white",

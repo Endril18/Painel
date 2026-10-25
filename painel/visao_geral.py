@@ -3,7 +3,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from painel.config import ANOS_IDEB, PB_CENTRO, REF_IDEB
+from painel.config import ANOS_IDEB, METAS_IDEB, PB_CENTRO
 from painel.dados import formatar
 from painel.mapas import (
     ScatterMap,
@@ -54,8 +54,9 @@ def renderizar(
         formatar(d_ind[coluna].median(), unidade) if n_com_dado else "sem dado",
     )
     if coluna == "IDEB" and n_com_dado:
-        pct = (d_ind["IDEB"] >= REF_IDEB).mean() * 100
-        c4.metric(f"Com IDEB ≥ {str(REF_IDEB).replace('.', ',')}", f"{pct:.0f}%")
+        ref_ideb = METAS_IDEB.get(ano, 4.4)
+        pct = (d_ind["IDEB"] >= ref_ideb).mean() * 100
+        c4.metric(f"Com IDEB ≥ {str(ref_ideb).replace('.', ',')}", f"{pct:.0f}%")
     else:
         c4.metric("Escolas integrais", f"{(d['TIPO_OFERTA'] == 'Integral').mean() * 100:.0f}%")
 
@@ -164,11 +165,12 @@ def renderizar(
             margin=dict(l=0, r=0, t=40, b=0),
             yaxis_title="Escolas")
         if coluna == "IDEB":
+            ref_ideb = METAS_IDEB.get(ano, 4.4)
             hist.add_vline(
-                x=REF_IDEB,
+                x=ref_ideb,
                 line_dash="dash",
                 line_color="#555",
-                annotation_text=f"Referência {str(REF_IDEB).replace('.', ',')}",
+                annotation_text=f"Referência {str(ref_ideb).replace('.', ',')}",
                 annotation_position="top",
             )
         st.plotly_chart(hist, use_container_width=True)
