@@ -176,7 +176,7 @@ def renderizar(
         st.plotly_chart(hist, use_container_width=True)
 
     with col_rank:
-        st.subheader("Panorama Estadual — Ranking Municipal")
+        st.subheader("Panorama Estadual")
         tabela_base = d_ind[["NO_ENTIDADE", "NO_MUNICIPIO", "GRE", "TIPO_OFERTA", coluna]].rename(
             columns={
                 "NO_ENTIDADE": "Escola",
