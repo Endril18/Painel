@@ -27,12 +27,6 @@ except FileNotFoundError:
 anos = sorted(df["NU_ANO_CENSO"].unique())
 
 st.caption("Ensino Médio da rede estadual da Paraíba")
-st.caption(
-    "Escolas estaduais que ofertam Ensino Médio. Fonte: INEP (Censo Escolar, IDEB, "
-    "taxas de rendimento e indicadores educacionais). "
-    "A escola é classificada como integral quando 70% ou mais das matrículas do "
-    "Ensino Médio são em tempo integral."
-)
 
 
 def pagina_visao_geral():
@@ -45,6 +39,7 @@ def pagina_caracteristicas_ideb():
 
 def pagina_escola():
     st.header("Escola")
+    st.caption("Busque uma escola para consultar sua ficha, o histórico e a comparação com a rede.")
     renderizar_escola(df, anos)
 
 
@@ -61,3 +56,12 @@ pagina = st.navigation(
     position="top",
 )
 pagina.run()
+
+st.divider()
+with st.expander("Fontes e critério de oferta"):
+    st.caption(
+        "Escolas estaduais que ofertam Ensino Médio. Fonte: INEP (Censo Escolar, IDEB, "
+        "taxas de rendimento e indicadores educacionais). "
+        "A escola é classificada como integral quando 70% ou mais das matrículas do "
+        "Ensino Médio são em tempo integral."
+    )
