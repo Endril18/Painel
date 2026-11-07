@@ -1,6 +1,7 @@
 """Página Características e IDEB: resultados pré-calculados, sem inferência causal."""
 
 from pathlib import Path
+from textwrap import wrap
 
 import numpy as np
 import pandas as pd
@@ -8,7 +9,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from painel.dados import DATA_DIR, carregar_caracteristicas_ideb
+from painel.dados import DATA_DIR, carregar_caracteristicas_ideb, formatar
 
 COR_ALTO = "#2456A6"
 COR_BAIXO = "#D68A39"
@@ -58,12 +59,36 @@ def _tabela_perfil(perfil):
     return tabela.reset_index(drop=True)
 
 
+def _leitura_perfil(dados):
+    """Descreve os valores já exportados, respeitando o recorte selecionado."""
+    valores = dados.set_index(["coluna", "grupo"])["valor"]
+    leitura = []
+    for coluna, rotulo in [
+        ("TDI_MED_CAT_0", "Distorção idade-série"),
+        ("AFD_ADEQUADA", "Formação docente adequada"),
+    ]:
+        if (coluna, "Alto") in valores.index and (coluna, "Baixo") in valores.index:
+            alto = formatar(valores.loc[(coluna, "Alto")], "%")
+            baixo = formatar(valores.loc[(coluna, "Baixo")], "%")
+            leitura.append(
+                f"**{rotulo}:** mediana de **{alto}** no grupo de IDEB alto "
+                f"e **{baixo}** no grupo baixo."
+            )
+    if ("IS_INT", "Alto") in valores.index and ("IS_INT", "Baixo") in valores.index:
+        alto = formatar(valores.loc[("IS_INT", "Alto")], "%")
+        baixo = formatar(valores.loc[("IS_INT", "Baixo")], "%")
+        leitura.append(
+            f"**Composição por oferta:** as integrais representam **{alto}** "
+            f"do grupo alto e **{baixo}** do baixo. "
+            "A composição integral/parcial difere entre os grupos."
+        )
+    if leitura:
+        st.info("\n\n".join(leitura))
+        st.caption("Comparação descritiva entre grupos; não isola efeitos nem demonstra causalidade.")
+
+
 def _perfil(perfil):
-    st.subheader("Características das escolas com IDEB alto e baixo — 2025")
-    st.caption(
-        "Grupos definidos pelos percentis 20 e 80 da distribuição do IDEB. "
-        "As escolas empatadas nos limites foram incluídas."
-    )
+    st.subheader("IDEB alto × baixo — 2025")
 
     recortes = [r for r in ("Todas", "Só integrais", "Só parciais")
                 if r in perfil["recorte"].unique()]
@@ -73,6 +98,10 @@ def _perfil(perfil):
         st.info("Não há características disponíveis para esse recorte.")
         return
 
+    st.caption(
+        "Grupos definidos pelos percentis 20 e 80 do IDEB no recorte selecionado, "
+        "incluindo os empates nos limites."
+    )
     p20 = float(dados["p20"].iloc[0])
     p80 = float(dados["p80"].iloc[0])
     n_baixo = int(dados.loc[dados["grupo"] == "Baixo", "n_grupo"].iloc[0])
@@ -83,6 +112,7 @@ def _perfil(perfil):
     c.metric("Escolas no grupo baixo", n_baixo)
     d.metric("Escolas no grupo alto", n_alto)
 
+    _leitura_perfil(dados)
     tabela = _tabela_perfil(dados)
     tipo = st.radio(
         "Indicadores para o gráfico",
@@ -131,11 +161,18 @@ def _perfil(perfil):
                            "<br>N válido: %{customdata[0]:.0f}"
                            "<br>N do grupo: %{customdata[1]:.0f}<extra></extra>"),
         )
+        rotulos = exibicao["Rotulo"].drop_duplicates().tolist()
         fig.update_layout(
-            template="plotly_white", height=max(300, 110 * exibicao["coluna"].nunique()),
-            margin=dict(l=15, r=70, t=10, b=20),
-            legend=dict(orientation="h", y=1.13, x=0),
-            yaxis=dict(autorange="reversed"),
+            template="plotly_white", height=max(320, 80 * exibicao["coluna"].nunique()),
+            margin=dict(l=15, r=45, t=40, b=20),
+            font=dict(size=13),
+            legend=dict(orientation="h", y=1.02, yanchor="bottom", x=0,
+                        title_text="Grupo de IDEB"),
+            yaxis=dict(
+                autorange="reversed", tickfont=dict(size=12), tickmode="array",
+                tickvals=rotulos,
+                ticktext=["<br>".join(wrap(rotulo, width=22)) for rotulo in rotulos],
+            ),
         )
         if tipo == "Percentuais":
             fig.update_xaxes(title="Percentual (%)", range=[0, 110])
@@ -258,9 +295,8 @@ def _correlacoes(correlacoes):
 
 def renderizar(df):
     st.header("Características e IDEB")
-    st.write(
-        "Explore as características das escolas nos extremos do IDEB de 2025 "
-        "e as associações observadas nas diferentes edições do indicador."
+    st.caption(
+        "Compare os grupos de IDEB de 2025 e explore associações nas diferentes edições."
     )
     necessarios = ("perfil_ideb_2025.parquet", "correlacoes_ideb.parquet")
     faltantes = [nome for nome in necessarios if not (DATA_DIR / nome).exists()]
@@ -278,6 +314,7 @@ def renderizar(df):
 
     _perfil(perfil)
     st.divider()
+    st.caption("A dispersão e as correlações abaixo usam a população completa de cada análise.")
     _dispersao(df)
     st.divider()
     _correlacoes(correlacoes)

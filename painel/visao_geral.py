@@ -20,6 +20,7 @@ def _salvar_filtro(nome):
 
 def renderizar_com_filtros(df, anos):
     st.header("Visão geral")
+    st.caption("Explore o panorama estadual por ano, indicador, oferta e localização.")
     # Cópia independente dos widgets para manter o recorte ao trocar de página.
     filtros = st.session_state.setdefault(
         "visao_geral_filtros",
@@ -212,9 +213,10 @@ def renderizar(
     if n_com_dado == 0:
         return
 
+    st.divider()
     col_dist, col_rank = st.columns(2)
     with col_dist:
-        st.subheader("Distribuição de Ofertas")
+        st.subheader("Distribuição por oferta")
         hist = px.histogram(
             d_ind,
             x=coluna,
@@ -242,7 +244,7 @@ def renderizar(
         st.plotly_chart(hist, use_container_width=True)
 
     with col_rank:
-        st.subheader("Panorama Estadual")
+        st.subheader("Escolas do recorte")
         tabela_base = d_ind[["NO_ENTIDADE", "NO_MUNICIPIO", "GRE", "TIPO_OFERTA", coluna]].rename(
             columns={
                 "NO_ENTIDADE": "Escola",

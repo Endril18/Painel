@@ -43,7 +43,7 @@ def renderizar(df, anos):
     esc = hist.iloc[-1]
     gre = esc["GRE"]
 
-    st.header(esc["NO_ENTIDADE"])
+    st.subheader(esc["NO_ENTIDADE"])
     loc = LOCALIZACAO.get(int(esc["TP_LOCALIZACAO"]), "") if pd.notna(esc["TP_LOCALIZACAO"]) else ""
     st.markdown(
         f"**{esc['NO_MUNICIPIO']}** · {gre}" + (f" · Zona {loc.lower()}" if loc else "")
@@ -58,6 +58,7 @@ def renderizar(df, anos):
 
     col_ficha, col_mapa = st.columns([3, 2])
     with col_ficha:
+        st.subheader("Ficha da escola")
         ano_f = st.selectbox(
             "Ano da ficha",
             anos_escola,
@@ -69,9 +70,9 @@ def renderizar(df, anos):
         st.caption(
             f"Em cada item, a mediana da rede estadual em {ano_f} aparece abaixo do valor."
         )
-        cols = st.columns(5)
+        cols = st.columns(3)
         for i, (rot, col, un, casas) in enumerate(FICHA):
-            with cols[i % 5]:
+            with cols[i % 3]:
                 st.metric(rot, formatar(linha[col], un, casas))
                 st.caption(f"Rede: {formatar(ref_ano[col].median(), un, casas)}")
         extra = []
@@ -106,6 +107,7 @@ def renderizar(df, anos):
         else:
             st.info("Esta escola não tem localização no mapa.")
 
+    st.divider()
     st.subheader("Histórico (2016–2025)")
     ind_label = st.selectbox("Indicador", list(INDICADORES.keys()), key="ind_hist")
     ind_col, _, _, ind_ideb = INDICADORES[ind_label]
@@ -161,6 +163,7 @@ def renderizar(df, anos):
             "(2017, 2019, 2021, 2023, 2025); as linhas ligam os anos com dado. "
         )
 
+    st.divider()
     st.subheader(f"Comparação em {ano_f}")
     ref_gre = ref_ano[ref_ano["GRE"] == gre]
     linhas = []
@@ -196,6 +199,7 @@ def renderizar(df, anos):
         "docente, valores menores indicam melhor situação."
     )
 
+    st.divider()
     st.subheader("Taxas de rendimento da escola")
     tx = hist[
         ["NU_ANO_CENSO", "TX_APROV_MED", "TX_REPROV_MED", "TX_ABAND_MED"]
