@@ -18,6 +18,13 @@ def carregar_dados():
     return df, escolas
 
 
+@st.cache_data
+def carregar_caracteristicas_ideb():
+    perfil = pd.read_parquet(DATA_DIR / "perfil_ideb_2025.parquet")
+    correlacoes = pd.read_parquet(DATA_DIR / "correlacoes_ideb.parquet")
+    return perfil, correlacoes
+
+
 def formatar(valor, unidade="", casas=1):
     if pd.isna(valor):
         return "sem dado"

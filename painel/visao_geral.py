@@ -3,13 +3,79 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from painel.config import ANOS_IDEB, METAS_IDEB, PB_CENTRO
+from painel.config import ANOS_IDEB, INDICADORES, METAS_IDEB, PB_CENTRO
 from painel.dados import formatar
 from painel.mapas import (
     ScatterMap,
     adicionar_municipios_paraiba,
     aplicar_layout_mapa,
 )
+
+
+def _salvar_filtro(nome):
+    st.session_state["visao_geral_filtros"][nome] = st.session_state[
+        f"_visao_geral_{nome}"
+    ]
+
+
+def renderizar_com_filtros(df, anos):
+    st.header("Visão geral")
+    # Cópia independente dos widgets para manter o recorte ao trocar de página.
+    filtros = st.session_state.setdefault(
+        "visao_geral_filtros",
+        dict(ano=anos[-1], indicador="IDEB", tipo="Todas", gres=[], municipios=[], busca=""),
+    )
+    for nome, valor in filtros.items():
+        st.session_state[f"_visao_geral_{nome}"] = valor
+
+    col_ano, col_indicador, col_tipo = st.columns(3)
+    with col_ano:
+        ano = st.select_slider(
+            "Ano", options=anos, key="_visao_geral_ano",
+            on_change=_salvar_filtro, args=("ano",),
+        )
+    with col_indicador:
+        indicador_label = st.selectbox(
+            "Indicador", list(INDICADORES), key="_visao_geral_indicador",
+            on_change=_salvar_filtro, args=("indicador",),
+        )
+    with col_tipo:
+        tipo = st.radio(
+            "Tipo de oferta", ["Todas", "Integral", "Parcial"], horizontal=True,
+            key="_visao_geral_tipo", on_change=_salvar_filtro, args=("tipo",),
+        )
+
+    with st.expander("Filtros adicionais"):
+        gres_disp = sorted(
+            df["GRE"].unique(),
+            key=lambda s: (s == "Sem GRE", int(s.split("ª")[0]) if "ª" in s else 99),
+        )
+        gres_sel = st.multiselect(
+            "GRE", gres_disp, placeholder="Todas", key="_visao_geral_gres",
+            on_change=_salvar_filtro, args=("gres",),
+        )
+        base_mun = df if not gres_sel else df[df["GRE"].isin(gres_sel)]
+        municipios_disp = sorted(base_mun["NO_MUNICIPIO"].dropna().unique())
+        # Uma nova GRE pode excluir municípios escolhidos no recorte anterior.
+        filtros["municipios"] = [
+            municipio for municipio in filtros["municipios"]
+            if municipio in municipios_disp
+        ]
+        st.session_state["_visao_geral_municipios"] = filtros["municipios"]
+        mun_sel = st.multiselect(
+            "Município", municipios_disp, placeholder="Todos",
+            key="_visao_geral_municipios", on_change=_salvar_filtro,
+            args=("municipios",),
+        )
+        busca = st.text_input(
+            "Buscar escola pelo nome", key="_visao_geral_busca",
+            on_change=_salvar_filtro, args=("busca",),
+        )
+
+    renderizar(
+        df, ano, indicador_label, INDICADORES[indicador_label],
+        tipo, gres_sel, mun_sel, busca,
+    )
 
 
 def renderizar(
