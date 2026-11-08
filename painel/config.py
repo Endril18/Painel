@@ -18,8 +18,6 @@ INDICADORES = {
     "Docentes com formação adequada (%)": ("AFD_ADEQUADA", "%", True, False),
     "Docentes com esforço alto (%)": ("IED_ESFORCO_ALTO", "%", False, False),
     "Complexidade da gestão (nível)": ("ICG_NIVEL", "", None, False),
-    "Nota de infraestrutura (0-100)": ("IDX_INFRAESTRUTURA", "", True, False),
-    "Nota de tecnologia (0-100)": ("IDX_TECNOLOGIA", "", True, False),
 }
 
 FICHA = [
@@ -29,9 +27,6 @@ FICHA = [
     ("Alunos por turma", "ALUNOS_POR_TURMA", "", 1),
     ("Alunos por docente", "ALUNOS_POR_DOCENTE", "", 1),
     ("Matrículas em tempo integral", "PCT_INT", "%", 0),
-    ("Computadores por 100 alunos", "COMPUTADORES_ALUNO_P100", "", 1),
-    ("Nota de infraestrutura (0-100)", "IDX_INFRAESTRUTURA", "", 0),
-    ("Nota de tecnologia (0-100)", "IDX_TECNOLOGIA", "", 0),
 ]
 
 COMPARACAO = [
@@ -43,8 +38,6 @@ COMPARACAO = [
     "Docentes com formação adequada (%)",
     "Docentes com esforço alto (%)",
     "Complexidade da gestão (nível)",
-    "Nota de infraestrutura (0-100)",
-    "Nota de tecnologia (0-100)",
 ]
 
 LOCALIZACAO = {1: "Urbana", 2: "Rural"}

@@ -7,8 +7,8 @@ Execute com: streamlit run app.py
 import streamlit as st
 
 from painel.dados import carregar_dados
-from painel.caracteristicas_ideb import renderizar as renderizar_caracteristicas_ideb
 from painel.escola import renderizar as renderizar_escola
+from painel.integral_parcial import renderizar as renderizar_integral_parcial
 from painel.visao_geral import renderizar_com_filtros as renderizar_visao_geral
 
 
@@ -33,23 +33,23 @@ def pagina_visao_geral():
     renderizar_visao_geral(df, anos)
 
 
-def pagina_caracteristicas_ideb():
-    renderizar_caracteristicas_ideb(df)
-
-
 def pagina_escola():
     st.header("Escola")
     st.caption("Busque uma escola para consultar sua ficha, o histórico e a comparação com a rede.")
     renderizar_escola(df, anos)
 
 
+def pagina_integral_parcial():
+    renderizar_integral_parcial()
+
+
 pagina = st.navigation(
     [
         st.Page(pagina_visao_geral, title="Visão geral", default=True),
         st.Page(
-            pagina_caracteristicas_ideb,
-            title="Características e IDEB",
-            url_path="caracteristicas-ideb",
+            pagina_integral_parcial,
+            title="Ensino integral e IDEB",
+            url_path="integral-parcial",
         ),
         st.Page(pagina_escola, title="Escola", url_path="escola"),
     ],
@@ -58,10 +58,9 @@ pagina = st.navigation(
 pagina.run()
 
 st.divider()
-with st.expander("Fontes e critério de oferta"):
-    st.caption(
-        "Escolas estaduais que ofertam Ensino Médio. Fonte: INEP (Censo Escolar, IDEB, "
-        "taxas de rendimento e indicadores educacionais). "
-        "A escola é classificada como integral quando 70% ou mais das matrículas do "
-        "Ensino Médio são em tempo integral."
-    )
+st.caption(
+    "**Fontes e critério de oferta:** escolas estaduais que ofertam Ensino Médio. "
+    "Fonte: INEP (Censo Escolar, IDEB, taxas de rendimento e indicadores educacionais). "
+    "A escola é classificada como integral quando 70% ou mais das matrículas do "
+    "Ensino Médio são em tempo integral."
+)

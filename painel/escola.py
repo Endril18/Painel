@@ -14,7 +14,6 @@ from painel.config import (
     METAS_IDEB,
 )
 from painel.dados import formatar
-from painel.mapas import ScatterMap, aplicar_layout_mapa
 
 
 def renderizar(df, anos):
@@ -56,56 +55,30 @@ def renderizar(df, anos):
             f"Dados disponíveis de {anos_escola[0]} a {anos_escola[-1]}."
         )
 
-    col_ficha, col_mapa = st.columns([3, 2])
-    with col_ficha:
-        st.subheader("Ficha da escola")
-        ano_f = st.selectbox(
-            "Ano da ficha",
-            anos_escola,
-            index=len(anos_escola) - 1,
-            key="ano_ficha",
-        )
-        linha = hist[hist["NU_ANO_CENSO"] == ano_f].iloc[0]
-        ref_ano = df[df["NU_ANO_CENSO"] == ano_f]
-        st.caption(
-            f"Em cada item, a mediana da rede estadual em {ano_f} aparece abaixo do valor."
-        )
-        cols = st.columns(3)
-        for i, (rot, col, un, casas) in enumerate(FICHA):
-            with cols[i % 3]:
-                st.metric(rot, formatar(linha[col], un, casas))
-                st.caption(f"Rede: {formatar(ref_ano[col].median(), un, casas)}")
-        extra = []
-        extra.append(
-            "Oferece EJA no Ensino Médio"
-            if linha["TEM_EJA"] == 1
-            else "Sem EJA no Ensino Médio"
-        )
-        st.caption(" · ".join(extra))
-
-    with col_mapa:
-        if pd.notna(esc["LATITUDE"]) and pd.notna(esc["LONGITUDE"]):
-            fm = go.Figure(
-                ScatterMap(
-                    lat=[esc["LATITUDE"]],
-                    lon=[esc["LONGITUDE"]],
-                    mode="markers",
-                    marker=dict(size=14, color=COR_ESCOLA),
-                    text=[esc["NO_ENTIDADE"]],
-                    hoverinfo="text",
-                )
-            )
-            aplicar_layout_mapa(
-                fm,
-                {"lat": esc["LATITUDE"], "lon": esc["LONGITUDE"]},
-                12,
-                300,
-            )
-            st.plotly_chart(fm, use_container_width=True)
-            if esc["COORD_APROX"] == 1:
-                st.caption("Localização aproximada (referência do município).")
-        else:
-            st.info("Esta escola não tem localização no mapa.")
+    st.subheader("Ficha da escola")
+    ano_f = st.selectbox(
+        "Ano da ficha",
+        anos_escola,
+        index=len(anos_escola) - 1,
+        key="ano_ficha",
+    )
+    linha = hist[hist["NU_ANO_CENSO"] == ano_f].iloc[0]
+    ref_ano = df[df["NU_ANO_CENSO"] == ano_f]
+    st.caption(
+        f"Em cada item, a mediana da rede estadual em {ano_f} aparece abaixo do valor."
+    )
+    cols = st.columns(3)
+    for i, (rot, col, un, casas) in enumerate(FICHA):
+        with cols[i % 3]:
+            st.metric(rot, formatar(linha[col], un, casas))
+            st.caption(f"Rede: {formatar(ref_ano[col].median(), un, casas)}")
+    extra = []
+    extra.append(
+        "Oferece EJA no Ensino Médio"
+        if linha["IN_EJA"] == 1
+        else "Sem EJA no Ensino Médio"
+    )
+    st.caption(" · ".join(extra))
 
     st.divider()
     st.subheader("Histórico (2016–2025)")

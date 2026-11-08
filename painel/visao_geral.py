@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from painel.config import ANOS_IDEB, INDICADORES, METAS_IDEB, PB_CENTRO
+from painel.correlacoes_indicadores import renderizar as renderizar_correlacoes
 from painel.dados import formatar
 from painel.mapas import (
     ScatterMap,
@@ -181,7 +182,7 @@ def renderizar(
             )
         )
     aplicar_layout_mapa(
-        fig, PB_CENTRO, 6.6, 560, estilo="white-bg"
+        fig, PB_CENTRO, 7.2, 560, estilo="white-bg"
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -272,3 +273,7 @@ def renderizar(
                 "Este indicador descreve o perfil da escola; "
                 "maior ou menor não significa melhor ou pior."
             )
+
+    st.divider()
+    renderizar_correlacoes()
+
