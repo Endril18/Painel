@@ -11,7 +11,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from painel.dados import DATA_DIR, carregar_caracteristicas_ideb
+from painel.dados import DATA_DIR
 
 
 ANOS = [2017, 2019, 2023, 2025]
@@ -32,6 +32,16 @@ CAMPOS_OBRIGATORIOS = {
     "p_ajustado",
 }
 ARQUIVO = "correlacoes_ideb.parquet"
+
+
+@st.cache_data
+def carregar_caracteristicas_ideb() -> pd.DataFrame:
+    """Carrega os resultados exportados para esta página.
+
+    O carregamento fica local ao módulo para que a página continue compatível
+    com versões anteriores de ``painel.dados`` durante um deploy incremental.
+    """
+    return pd.read_parquet(DATA_DIR / ARQUIVO)
 
 
 def preparar_correlacoes(df: pd.DataFrame) -> pd.DataFrame:
