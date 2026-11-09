@@ -72,13 +72,13 @@ def renderizar(df, anos):
         with cols[i % 3]:
             st.metric(rot, formatar(linha[col], un, casas))
             st.caption(f"Rede: {formatar(ref_ano[col].median(), un, casas)}")
-    extra = []
-    extra.append(
-        "Oferece EJA no Ensino Médio"
-        if linha["IN_EJA"] == 1
-        else "Sem EJA no Ensino Médio"
-    )
-    st.caption(" · ".join(extra))
+    eja = linha["IN_EJA"]
+    if pd.isna(eja):
+        st.caption("Informação sobre EJA indisponível para esta escola.")
+    elif float(eja) == 1:
+        st.caption("Oferece EJA no Ensino Médio")
+    else:
+        st.caption("Sem EJA no Ensino Médio")
 
     st.divider()
     st.subheader("Histórico (2016–2025)")
