@@ -19,6 +19,12 @@ def carregar_dados():
 
 
 @st.cache_data
+def carregar_caracteristicas_ideb():
+    """Carrega os resultados exportados para a seção Características e IDEB."""
+    return pd.read_parquet(DATA_DIR / "correlacoes_ideb.parquet")
+
+
+@st.cache_data
 def carregar_integral_parcial():
     """Carrega os resultados analíticos exportados para a página Integral × Parcial."""
     oferta = pd.read_parquet(DATA_DIR / "oferta_anual.parquet")
@@ -34,8 +40,7 @@ def carregar_ensino_integral_ideb():
     oferta = pd.read_parquet(DATA_DIR / "oferta_anual.parquet")
     ideb_oferta = pd.read_parquet(DATA_DIR / "ideb_por_oferta.parquet")
     testes_ideb = pd.read_parquet(DATA_DIR / "testes_ideb_oferta.parquet")
-    componentes = pd.read_parquet(DATA_DIR / "componentes_ideb_2025.parquet")
-    return oferta, ideb_oferta, testes_ideb, componentes
+    return oferta, ideb_oferta, testes_ideb
 
 
 def formatar(valor, unidade="", casas=1):

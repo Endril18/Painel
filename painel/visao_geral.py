@@ -20,7 +20,7 @@ def _salvar_filtro(nome):
 
 
 def renderizar_com_filtros(df, anos):
-    st.header("Visão geral")
+    st.header("Indicadores educacionais e IDEB")
     st.caption("Explore o panorama estadual por ano, indicador, oferta e localização.")
     # Cópia independente dos widgets para manter o recorte ao trocar de página.
     filtros = st.session_state.setdefault(

@@ -7,6 +7,7 @@ Execute com: streamlit run app.py
 import streamlit as st
 
 from painel.dados import carregar_dados
+from painel.caracteristicas_ideb import renderizar as renderizar_caracteristicas_ideb
 from painel.escola import renderizar as renderizar_escola
 from painel.integral_parcial import renderizar as renderizar_integral_parcial
 from painel.visao_geral import renderizar_com_filtros as renderizar_visao_geral
@@ -33,6 +34,10 @@ def pagina_visao_geral():
     renderizar_visao_geral(df, anos)
 
 
+def pagina_caracteristicas_ideb():
+    renderizar_caracteristicas_ideb()
+
+
 def pagina_escola():
     st.header("Escola")
     st.caption("Busque uma escola para consultar sua ficha, o histórico e a comparação com a rede.")
@@ -45,11 +50,20 @@ def pagina_integral_parcial():
 
 pagina = st.navigation(
     [
-        st.Page(pagina_visao_geral, title="Visão geral", default=True),
+        st.Page(
+            pagina_visao_geral,
+            title="Indicadores educacionais e IDEB",
+            default=True,
+        ),
         st.Page(
             pagina_integral_parcial,
             title="Ensino integral e IDEB",
             url_path="integral-parcial",
+        ),
+        st.Page(
+            pagina_caracteristicas_ideb,
+            title="Características das escolas e IDEB",
+            url_path="caracteristicas-ideb",
         ),
         st.Page(pagina_escola, title="Escola", url_path="escola"),
     ],

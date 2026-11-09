@@ -49,9 +49,6 @@ ARQUIVOS_SECAO = {
         "ano", "n_integral", "n_parcial", "diferenca", "ic95_inferior",
         "ic95_superior",
     },
-    "componentes_ideb_2025.parquet": {
-        "tipo_oferta", "n_escolas", "ideb", "nota_media", "rendimento",
-    },
 }
 
 
@@ -122,7 +119,7 @@ def _recorte_anos(quadro, anos, nome):
 def _secao_expansao(oferta):
     oferta = _recorte_anos(oferta, list(range(2016, 2026)), "oferta_anual.parquet")
 
-    st.subheader("Expansão da oferta integral (2016–2025)")
+    st.subheader("Evolução da proporção de escolas integrais (2016–2025)")
     st.caption(
         "A classificação considera integral a escola com pelo menos 70% das "
         "matrículas do Ensino Médio em tempo integral. O percentual de matrículas "
@@ -130,25 +127,20 @@ def _secao_expansao(oferta):
         "necessariamente a matrículas individuais em jornada integral."
     )
     fig = go.Figure()
-    for coluna, nome, cor in [
-        ("pct_integrais", "Escolas classificadas como integrais", COR_INTEGRAL),
-        (
-            "pct_mat_integrais",
-            "Matrículas em escolas classificadas como integrais",
-            COR_PARCIAL,
-        ),
-    ]:
-        fig.add_trace(
-            go.Scatter(
-                x=oferta["ano"],
-                y=oferta[coluna],
-                mode="lines+markers",
-                name=nome,
-                line=dict(color=cor, width=3),
-                marker=dict(size=7),
-                hovertemplate=f"{nome}<br>Ano: %{{x}}<br>Percentual: %{{y:.1f}}%<extra></extra>",
-            )
+    fig.add_trace(
+        go.Scatter(
+            x=oferta["ano"],
+            y=oferta["pct_integrais"],
+            mode="lines+markers",
+            name="Escolas classificadas como integrais",
+            line=dict(color=COR_INTEGRAL, width=3),
+            marker=dict(size=7),
+            hovertemplate=(
+                "Escolas classificadas como integrais<br>"
+                "Ano: %{x}<br>Percentual: %{y:.1f}%<extra></extra>"
+            ),
         )
+    )
     fig.update_layout(
         template="plotly_white",
         height=360,
@@ -159,12 +151,14 @@ def _secao_expansao(oferta):
             title="Ano",
         ),
         yaxis=dict(title="Percentual (%)", ticksuffix="%", rangemode="tozero"),
-        legend=dict(orientation="h", y=1.08, x=0),
+        showlegend=False,
     )
     st.plotly_chart(fig, use_container_width=True)
     st.caption(
-        "Interpretação: a expansão da oferta integral aparece simultaneamente na "
-        "proporção de escolas e na proporção de matrículas localizadas nessas escolas."
+        "A proporção de escolas classificadas como integrais na rede estadual de "
+        "ensino médio da Paraíba aumentou de 6,1% em 2016 para 55,9% em 2025. "
+        "O crescimento foi mais acentuado até 2021, quando atingiu 59,0%, seguido "
+        "de relativa estabilização nos anos posteriores."
     )
 
 
@@ -248,51 +242,6 @@ def _secao_ideb(ideb_oferta, testes):
         "Diferença calculada como Integral − Parcial. Interpretação: as médias "
         "observadas foram maiores no grupo Integral nos quatro anos apresentados; "
         "essa comparação é descritiva e não demonstra causalidade."
-    )
-
-
-def _secao_componentes(componentes):
-    st.subheader("Componentes do IDEB em 2025")
-    componentes = componentes.set_index("tipo_oferta")
-    tabela = pd.DataFrame(
-        {
-            "Indicador": ["IDEB médio", "Nota média padronizada", "Indicador de rendimento"],
-            "Integral": [
-                componentes.loc["Integral", "ideb"],
-                componentes.loc["Integral", "nota_media"],
-                componentes.loc["Integral", "rendimento"],
-            ],
-            "Parcial": [
-                componentes.loc["Parcial", "ideb"],
-                componentes.loc["Parcial", "nota_media"],
-                componentes.loc["Parcial", "rendimento"],
-            ],
-            "Diferença (Integral − Parcial)": [
-                componentes.loc["Integral", "ideb"] - componentes.loc["Parcial", "ideb"],
-                componentes.loc["Integral", "nota_media"]
-                - componentes.loc["Parcial", "nota_media"],
-                componentes.loc["Integral", "rendimento"]
-                - componentes.loc["Parcial", "rendimento"],
-            ],
-            "N escolas integral": componentes.loc["Integral", "n_escolas"],
-            "N escolas parcial": componentes.loc["Parcial", "n_escolas"],
-        }
-    )
-    st.dataframe(
-        tabela,
-        hide_index=True,
-        use_container_width=True,
-        column_config={
-            "Integral": st.column_config.NumberColumn(format="%.2f"),
-            "Parcial": st.column_config.NumberColumn(format="%.2f"),
-            "Diferença (Integral − Parcial)": st.column_config.NumberColumn(format="%.2f"),
-            "N escolas integral": st.column_config.NumberColumn(format="%d"),
-            "N escolas parcial": st.column_config.NumberColumn(format="%d"),
-        },
-    )
-    st.caption(
-        "Interpretação: em 2025, o grupo Integral apresenta valores médios superiores "
-        "nos três indicadores. As diferenças são descritivas e não demonstram causalidade."
     )
 
 
@@ -451,10 +400,8 @@ def renderizar():
     _validar_arquivos_secao()
     dados = carregar_ensino_integral_ideb()
     _validar_colunas_secao(dados)
-    oferta, ideb_oferta, testes, componentes = dados
+    oferta, ideb_oferta, testes = dados
 
     _secao_expansao(oferta)
     st.divider()
     _secao_ideb(ideb_oferta, testes)
-    st.divider()
-    _secao_componentes(componentes)
