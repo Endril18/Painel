@@ -137,7 +137,7 @@ def renderizar(df, anos):
         )
 
     st.divider()
-    st.subheader(f"Comparação em {ano_f}")
+    st.subheader(f"Escola, GRE e REDE — {ano_f}")
     ref_gre = ref_ano[ref_ano["GRE"] == gre]
     linhas = []
     for rot in COMPARACAO:
