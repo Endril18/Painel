@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from painel.config import (
+    ANOS_IDEB,
     COMPARACAO,
     COR_ESCOLA,
     COR_GRE,
@@ -83,33 +84,67 @@ def renderizar(df, anos):
     st.divider()
     st.subheader("Histórico (2016–2025)")
     ind_label = st.selectbox("Indicador", list(INDICADORES.keys()), key="ind_hist")
-    ind_col, _, _, ind_ideb = INDICADORES[ind_label]
+    ind_col, ind_unidade, _, ind_ideb = INDICADORES[ind_label]
+    tipo_grafico = st.radio(
+        "Visualização",
+        ["Barras agrupadas", "Linhas"],
+        horizontal=True,
+        index=0,
+        key="tipo_grafico_historico",
+    )
 
-    serie_escola = hist.set_index("NU_ANO_CENSO")[ind_col].reindex(anos)
-    serie_rede = df.groupby("NU_ANO_CENSO")[ind_col].median().reindex(anos)
+    anos_historico = [
+        ano for ano in (ANOS_IDEB if ind_col == "IDEB" else anos) if ano in anos
+    ]
+    serie_escola = hist.set_index("NU_ANO_CENSO")[ind_col].reindex(anos_historico)
+    serie_rede = (
+        df.groupby("NU_ANO_CENSO")[ind_col].median().reindex(anos_historico)
+    )
     serie_gre = (
         df[df["GRE"] == gre]
         .groupby("NU_ANO_CENSO")[ind_col]
         .median()
-        .reindex(anos)
+        .reindex(anos_historico)
     )
 
-    fh = go.Figure()
-    for nome, serie, cor, dash in [
+    series_historico = [
         (esc["NO_ENTIDADE"], serie_escola, COR_ESCOLA, "solid"),
         (f"Mediana da {gre}", serie_gre, COR_GRE, "dash"),
         ("Mediana da rede estadual", serie_rede, COR_REDE, "dot"),
-    ]:
-        fh.add_trace(
-            go.Scatter(
-                x=anos,
-                y=serie.values,
-                mode="lines+markers",
-                name=nome,
-                line=dict(color=cor, dash=dash, width=3 if cor == COR_ESCOLA else 2),
-                connectgaps=True,
+    ]
+
+    fh = go.Figure()
+    for nome, serie, cor, dash in series_historico:
+        if tipo_grafico == "Linhas":
+            fh.add_trace(
+                go.Scatter(
+                    x=anos_historico,
+                    y=serie.values,
+                    mode="lines+markers",
+                    name=nome,
+                    line=dict(
+                        color=cor, dash=dash, width=3 if cor == COR_ESCOLA else 2
+                    ),
+                    connectgaps=True,
+                    hovertemplate=(
+                        f"%{{x}}<br>{nome}: %{{y:.1f}}{ind_unidade}<extra></extra>"
+                    ),
+                )
             )
-        )
+        else:
+            serie_com_dado = serie.dropna()
+            fh.add_trace(
+                go.Bar(
+                    x=serie_com_dado.index,
+                    y=serie_com_dado.values,
+                    name=nome,
+                    marker_color=cor,
+                    offsetgroup=nome,
+                    hovertemplate=(
+                        f"%{{x}}<br>{nome}: %{{y:.1f}}{ind_unidade}<extra></extra>"
+                    ),
+                )
+            )
     if ind_col == "IDEB":
         ref_ideb = METAS_IDEB.get(max(anos), 4.4)
         fh.add_hline(
@@ -118,23 +153,35 @@ def renderizar(df, anos):
             line_color="#999",
             annotation_text=f"Referência {str(ref_ideb).replace('.', ',')}",
         )
+    eixo_y = dict(title=ind_label, ticksuffix=ind_unidade)
+    if tipo_grafico == "Barras agrupadas":
+        eixo_y["rangemode"] = "tozero"
     fh.update_layout(
         template="plotly_white",
         height=380,
         margin=dict(l=0, r=0, t=10, b=0),
         xaxis=dict(dtick=1, title=None),
-        yaxis_title=ind_label,
+        yaxis=eixo_y,
         legend=dict(orientation="h", y=-0.2),
     )
+    if tipo_grafico == "Barras agrupadas":
+        fh.update_layout(barmode="group")
 
     st.plotly_chart(fh, use_container_width=True)
     if serie_escola.notna().sum() == 0:
         st.caption("A escola não tem dado deste indicador em nenhum ano.")
-    elif ind_ideb:
+    elif ind_ideb and tipo_grafico == "Linhas":
         st.caption(
             "Este indicador só existe nos anos de aplicação do IDEB "
             "(2017, 2019, 2021, 2023, 2025); as linhas ligam os anos com dado. "
         )
+    elif ind_ideb:
+        st.caption(
+            "Este indicador só existe nos anos de aplicação do IDEB "
+            "(2017, 2019, 2021, 2023, 2025)."
+        )
+    elif tipo_grafico == "Barras agrupadas":
+        st.caption("As barras aparecem somente nos anos com dado para cada série.")
 
     st.divider()
     st.subheader(f"Escola, GRE e REDE — {ano_f}")
