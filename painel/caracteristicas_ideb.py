@@ -188,14 +188,6 @@ def _tabela_detalhes(dados: pd.DataFrame) -> pd.DataFrame:
 
 
 def _interpretacao():
-    st.markdown("**Resumo**")
-    st.write(
-        "A oferta de EJA apresentou associação negativa com o IDEB nas quatro "
-        "edições. Laboratórios de ciências, laboratórios de informática, auditórios "
-        "e quadras esportivas apresentaram associações positivas, geralmente de "
-        "pequena magnitude. A direção foi consistente ao longo das edições, mas "
-        "nem todas as associações foram estatisticamente significativas."
-    )
     st.caption(
         "Essas correlações descrevem associações estaduais históricas e não demonstram "
         "que uma característica cause aumento ou redução do IDEB."
