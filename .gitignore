@@ -1,2 +1,10 @@
 *.md
 *.json
+
+# Python artefacts
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local virtual environment
+.venv/
