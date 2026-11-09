@@ -1,9 +1,3 @@
-"""
-Painel de escolas estaduais de Ensino Médio da Paraíba (2016-2025).
-
-Execute com: streamlit run app.py
-"""
-
 import streamlit as st
 
 from painel.dados import carregar_dados
