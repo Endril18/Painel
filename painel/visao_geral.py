@@ -10,6 +10,7 @@ from painel.mapas import (
     ScatterMap,
     adicionar_municipios_paraiba,
     aplicar_layout_mapa,
+    calcular_enquadramento_municipios,
 )
 
 
@@ -181,9 +182,23 @@ def renderizar(
                 hoverinfo="text",
             )
         )
-    aplicar_layout_mapa(
-        fig, PB_CENTRO, 7.2, 560, estilo="white-bg"
-    )
+    if mun_sel:
+        codigos_municipios = (
+            df.loc[df["NO_MUNICIPIO"].isin(mun_sel), "CO_MUNICIPIO"]
+            .dropna()
+            .unique()
+        )
+        enquadramento = calcular_enquadramento_municipios(codigos_municipios)
+    else:
+        enquadramento = None
+
+    if enquadramento:
+        centro = enquadramento["centro"]
+        zoom = enquadramento["zoom"]
+    else:
+        centro = PB_CENTRO
+        zoom = 7.2
+    aplicar_layout_mapa(fig, centro, zoom, 560, estilo="white-bg")
     st.plotly_chart(fig, use_container_width=True)
 
     notas = []
