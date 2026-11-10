@@ -21,6 +21,7 @@ CARACTERISTICAS = {
     "IN_AUDITORIO": "Auditório",
     "IN_LABORATORIO_INFORMATICA": "Laboratório de informática",
     "IN_QUADRA_ESPORTES": "Quadra esportiva",
+    "IS_INT": "Ensino médio integral",
 }
 CAMPOS_OBRIGATORIOS = {
     "ano",
@@ -31,7 +32,7 @@ CAMPOS_OBRIGATORIOS = {
     "correlacao",
     "p_ajustado",
 }
-ARQUIVO = "correlacoes_ideb.parquet"
+ARQUIVO = "correlacoes_censo_ideb.parquet"
 
 
 @st.cache_data
@@ -64,7 +65,10 @@ def preparar_correlacoes(df: pd.DataFrame) -> pd.DataFrame:
     )
     presentes = pd.MultiIndex.from_frame(dados[["variavel", "ano"]])
     if len(dados) != len(esperadas) or not esperadas.isin(presentes).all():
-        raise ValueError("São esperadas 20 correlações: 5 características × 4 edições.")
+        raise ValueError(
+            f"São esperadas {len(esperadas)} correlações: "
+            f"{len(CARACTERISTICAS)} características × {len(ANOS)} edições."
+        )
 
     numericas = [
         "n",

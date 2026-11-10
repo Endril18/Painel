@@ -21,17 +21,7 @@ def carregar_dados():
 @st.cache_data
 def carregar_caracteristicas_ideb():
     """Carrega os resultados exportados para a seção Características e IDEB."""
-    return pd.read_parquet(DATA_DIR / "correlacoes_ideb.parquet")
-
-
-@st.cache_data
-def carregar_integral_parcial():
-    """Carrega os resultados analíticos exportados para a página Integral × Parcial."""
-    oferta = pd.read_parquet(DATA_DIR / "oferta_anual.parquet")
-    ideb_oferta = pd.read_parquet(DATA_DIR / "ideb_por_oferta.parquet")
-    transicoes = pd.read_parquet(DATA_DIR / "transicoes_ideb.parquet")
-    evolucao_grupos = pd.read_parquet(DATA_DIR / "evolucao_grupos.parquet")
-    return oferta, ideb_oferta, transicoes, evolucao_grupos
+    return pd.read_parquet(DATA_DIR / "correlacoes_censo_ideb.parquet")
 
 
 @st.cache_data
