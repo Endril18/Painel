@@ -16,8 +16,6 @@ from painel.dados import DATA_DIR
 
 ANOS = [2017, 2019, 2023, 2025]
 INDICADORES = [
-    "Alunos por turma",
-    "Alunos por docente",
     "Distorção idade-série",
     "Complexidade da gestão",
     "Esforço docente alto",
