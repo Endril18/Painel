@@ -3,7 +3,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from painel.config import ANOS_IDEB, INDICADORES, METAS_IDEB, PB_CENTRO
+from painel.config import (
+    ANOS_IDEB,
+    INDICADORES,
+    METAS_IDEB,
+    PB_CENTRO,
+    TIPO_OFERTA_INTEGRAL,
+    TIPO_OFERTA_PARCIAL,
+    TIPOS_OFERTA,
+)
 from painel.correlacoes_indicadores import renderizar as renderizar_correlacoes
 from painel.dados import formatar
 from painel.mapas import (
@@ -28,6 +36,8 @@ def renderizar_com_filtros(df, anos):
         "visao_geral_filtros",
         dict(ano=anos[-1], indicador="IDEB", tipo="Todas", gres=[], municipios=[], busca=""),
     )
+    if filtros["tipo"] not in ["Todas", *TIPOS_OFERTA]:
+        filtros["tipo"] = "Todas"
     for nome, valor in filtros.items():
         st.session_state[f"_visao_geral_{nome}"] = valor
 
@@ -44,7 +54,7 @@ def renderizar_com_filtros(df, anos):
         )
     with col_tipo:
         tipo = st.radio(
-            "Tipo de oferta", ["Todas", "Integral", "Parcial"], horizontal=True,
+            "Tipo de oferta", ["Todas", *TIPOS_OFERTA], horizontal=True,
             key="_visao_geral_tipo", on_change=_salvar_filtro, args=("tipo",),
         )
 
@@ -127,7 +137,10 @@ def renderizar(
         pct = (d_ind["IDEB"] >= ref_ideb).mean() * 100
         c4.metric(f"Com IDEB ≥ {str(ref_ideb).replace('.', ',')}", f"{pct:.0f}%")
     else:
-        c4.metric("Escolas integrais", f"{(d['TIPO_OFERTA'] == 'Integral').mean() * 100:.0f}%")
+        c4.metric(
+            "Escolas integrais",
+            f"{(d['TIPO_OFERTA'] == TIPO_OFERTA_INTEGRAL).mean() * 100:.0f}%",
+        )
 
     st.subheader("Mapa das escolas")
     d_map = d.dropna(subset=["LATITUDE", "LONGITUDE"])
@@ -238,7 +251,10 @@ def renderizar(
             x=coluna,
             nbins=20,
             color="TIPO_OFERTA",
-            color_discrete_map={"Integral": "#1f77b4", "Parcial": "#ff7f0e"},
+            color_discrete_map={
+                TIPO_OFERTA_INTEGRAL: "#1f77b4",
+                TIPO_OFERTA_PARCIAL: "#ff7f0e",
+            },
             labels={coluna: indicador_label, "TIPO_OFERTA": "Oferta"},
             barmode="overlay",
             opacity=0.65,

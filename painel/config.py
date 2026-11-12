@@ -5,6 +5,10 @@ COR_ESCOLA = "#1f77b4"
 COR_GRE = "#ff7f0e"
 COR_REDE = "#7f7f7f"
 
+TIPO_OFERTA_INTEGRAL = "Integral Plena"
+TIPO_OFERTA_PARCIAL = "Parcial ou Mista"
+TIPOS_OFERTA = [TIPO_OFERTA_INTEGRAL, TIPO_OFERTA_PARCIAL]
+
 INDICADORES = {
     "IDEB": ("IDEB", "", True, True),
     "Nota média padronizada (Saeb)": ("NOTA_MEDIA", "", True, True),

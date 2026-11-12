@@ -12,6 +12,16 @@ def carregar_dados():
     escolas = pd.read_parquet(DATA_DIR / "escolas.parquet")
     escola_ano = pd.read_parquet(DATA_DIR / "escola_ano.parquet")
     df = escola_ano.merge(escolas, on="CO_ENTIDADE", how="left", validate="m:1")
+    # Esses indicadores eram exportados no Parquet anterior. Reconstituí-los
+    # aqui mantém a ficha da escola compatível com a base atual, que contém os
+    # quantitativos necessários para o cálculo.
+    for coluna, denominador in {
+        "ALUNOS_POR_TURMA": "QT_TUR_MED",
+        "ALUNOS_POR_DOCENTE": "QT_DOC_MED",
+    }.items():
+        df[coluna] = df["QT_MAT_MED"].div(
+            df[denominador].where(df[denominador].ne(0))
+        )
     df["GRE"] = df["CO_ORGAO_REGIONAL"].apply(
         lambda x: f"{int(x)}ª GRE" if pd.notna(x) else "Sem GRE"
     )

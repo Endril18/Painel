@@ -8,6 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from painel.config import TIPO_OFERTA_INTEGRAL, TIPO_OFERTA_PARCIAL
 from painel.dados import DATA_DIR, carregar_ensino_integral_ideb
 
 
@@ -101,11 +102,16 @@ def _secao_expansao(oferta):
         showlegend=False,
     )
     st.plotly_chart(fig, use_container_width=True)
+    inicio = oferta.iloc[0]
+    fim = oferta.iloc[-1]
+    pico = oferta.loc[oferta["pct_integrais"].idxmax()]
+    percentual = lambda valor: f"{valor:.1f}".replace(".", ",")
     st.caption(
         "A proporção de escolas classificadas como integrais na rede estadual de "
-        "ensino médio da Paraíba aumentou de 6,1% em 2016 para 55,9% em 2025. "
-        "O crescimento foi mais acentuado até 2021, quando atingiu 59,0%, seguido "
-        "de relativa estabilização nos anos posteriores."
+        f"ensino médio da Paraíba passou de {percentual(inicio['pct_integrais'])}% "
+        f"em {int(inicio['ano'])} para {percentual(fim['pct_integrais'])}% em "
+        f"{int(fim['ano'])}. O maior valor da série foi {percentual(pico['pct_integrais'])}% "
+        f"em {int(pico['ano'])}."
     )
 
 
@@ -113,7 +119,9 @@ def _secao_ideb(ideb_oferta, testes):
     anos_ideb = [2017, 2019, 2023, 2025]
     ideb_oferta = ideb_oferta.loc[
         ideb_oferta["ano"].isin(anos_ideb)
-        & ideb_oferta["tipo_oferta"].isin(["Integral", "Parcial"])
+        & ideb_oferta["tipo_oferta"].isin(
+            [TIPO_OFERTA_INTEGRAL, TIPO_OFERTA_PARCIAL]
+        )
     ].copy()
     if set(ideb_oferta["ano"]) != set(anos_ideb):
         faltantes = sorted(set(anos_ideb) - set(ideb_oferta["ano"]))
@@ -129,7 +137,10 @@ def _secao_ideb(ideb_oferta, testes):
     )
 
     fig = go.Figure()
-    for tipo, cor in [("Integral", COR_INTEGRAL), ("Parcial", COR_PARCIAL)]:
+    for tipo, cor in [
+        (TIPO_OFERTA_INTEGRAL, COR_INTEGRAL),
+        (TIPO_OFERTA_PARCIAL, COR_PARCIAL),
+    ]:
         serie = ideb_oferta.loc[ideb_oferta["tipo_oferta"] == tipo].sort_values("ano")
         fig.add_trace(
             go.Scatter(
@@ -186,7 +197,8 @@ def _secao_ideb(ideb_oferta, testes):
         },
     )
     st.caption(
-        "Diferença calculada como Integral − Parcial. Interpretação: as médias "
+        f"Diferença calculada como {TIPO_OFERTA_INTEGRAL} − {TIPO_OFERTA_PARCIAL}. "
+        "Interpretação: as médias "
         "observadas foram maiores no grupo Integral nos quatro anos apresentados; "
         "essa comparação é descritiva e não demonstra causalidade."
     )

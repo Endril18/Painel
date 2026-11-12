@@ -16,10 +16,12 @@ from painel.dados import DATA_DIR
 
 ANOS = [2017, 2019, 2023, 2025]
 INDICADORES = [
+    "Alunos por turma",
+    "Alunos por docente",
     "Distorção idade-série",
     "Complexidade da gestão",
     "Esforço docente alto",
-    "Formação docente adequada"
+    "Formação docente adequada",
 ]
 CAMPOS = {"ano", "indicador", "n", "correlacao", "p_ajustado"}
 ARQUIVO = "correlacoes_indicadores.parquet"
@@ -45,7 +47,10 @@ def preparar_correlacoes(df: pd.DataFrame) -> pd.DataFrame:
     )
     presentes = pd.MultiIndex.from_frame(dados[["indicador", "ano"]])
     if len(dados) != len(esperadas) or not esperadas.isin(presentes).all():
-        raise ValueError("São esperadas 16 correlações: 4 indicadores × 4 edições.")
+        raise ValueError(
+            f"São esperadas {len(esperadas)} correlações: "
+            f"{len(INDICADORES)} indicadores × {len(ANOS)} edições."
+        )
 
     dados["n"] = pd.to_numeric(dados["n"], errors="coerce")
     dados["correlacao"] = pd.to_numeric(dados["correlacao"], errors="coerce")
