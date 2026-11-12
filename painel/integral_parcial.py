@@ -69,7 +69,7 @@ def _secao_expansao(oferta):
 
     st.subheader("Evolução da proporção de escolas integrais (2016–2025)")
     st.caption(
-        "A classificação considera integral a escola com pelo menos 70% das "
+        "A classificação considera integral a escola com 100% das "
         "matrículas do Ensino Médio em tempo integral. O percentual de matrículas "
         "refere-se a todas as matrículas do Ensino Médio nessas escolas, e não "
         "necessariamente a matrículas individuais em jornada integral."

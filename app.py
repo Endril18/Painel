@@ -84,6 +84,6 @@ st.divider()
 st.caption(
     "**Fontes e critério de oferta:** escolas estaduais que ofertam Ensino Médio. "
     "Fonte: INEP (Censo Escolar, IDEB, taxas de rendimento e indicadores educacionais). "
-    "A escola é classificada como integral quando 70% ou mais das matrículas do "
+    "A escola é classificada como integral quando 100% das matrículas do "
     "Ensino Médio são em tempo integral."
 )
