@@ -1,9 +1,3 @@
-"""Correlação estadual entre indicadores educacionais e IDEB.
-
-Os valores exibidos são resultados pré-calculados exportados para Parquet.
-Este módulo valida e apresenta os resultados, sem recalcular estatísticas.
-"""
-
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +5,11 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from painel.barras_correlacoes import (
+    criar_lista_correlacoes,
+    formatar_coeficiente,
+    formatar_p_ajustado,
+)
 from painel.dados import DATA_DIR
 
 
@@ -69,7 +68,7 @@ def carregar_correlacoes() -> pd.DataFrame:
 
 
 def _p_formatado(p: float) -> str:
-    return "< 0,001" if p < 0.001 else f"{p:.3f}".replace(".", ",")
+    return formatar_p_ajustado(p)
 
 
 def criar_mapa_correlacoes(df: pd.DataFrame) -> go.Figure:
@@ -93,10 +92,10 @@ def criar_mapa_correlacoes(df: pd.DataFrame) -> go.Figure:
             p = float(p_adj.loc[indicador, ano])
             n = int(qtd.loc[indicador, ano])
             marca = "*" if p < 0.05 else ""
-            linha_rotulos.append(f"{valor:+.2f}{marca}".replace(".", ","))
+            linha_rotulos.append(f"{formatar_coeficiente(valor)}{marca}")
             linha_hover.append(
                 f"<b>{indicador}</b><br>EDIÇÃO: {ano}"
-                f"<br>Spearman: {valor:+.3f}"
+                f"<br>Spearman: {formatar_coeficiente(valor)}"
                 f"<br>Escolas: {n}"
                 f"<br>p ajustado (BH): {_p_formatado(p)}"
                 "<extra></extra>"
@@ -134,12 +133,13 @@ def criar_mapa_correlacoes(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def renderizar():
+def renderizar(ano: int):
     """Renderiza o bloco de correlações na página Visão geral."""
     st.subheader("Indicadores educacionais associados ao IDEB (2017–2025)")
     st.caption(
         "Associação de Spearman entre o IDEB e indicadores educacionais por edição. "
-        "O IDEB de 2021 não integra esta comparação."
+        "Os resultados representam o conjunto estadual: apenas o ano selecionado "
+        "controla esta seção. Os demais filtros não alteram as correlações."
     )
 
     caminho = Path(DATA_DIR) / ARQUIVO
@@ -156,10 +156,41 @@ def renderizar():
         st.error(f"Não foi possível ler as correlações: {erro}")
         return
 
-    st.plotly_chart(criar_mapa_correlacoes(dados), use_container_width=True)
+    recorte = dados.loc[dados["ano"] == ano].sort_values(
+        "correlacao", key=lambda valores: valores.abs(),
+        ascending=False, kind="stable",
+    )
+    if recorte.empty:
+        st.info(
+            f"Não há análise de correlação disponível para o ano selecionado ({ano}). "
+            "As edições disponíveis são 2017, 2019, 2023 e 2025."
+        )
+    else:
+        st.caption(f"Edição {ano} · Indicadores ordenados pela intensidade absoluta da correlação.")
+        st.html(criar_lista_correlacoes(
+            recorte.rename(columns={"indicador": "nome"}),
+            mostrar_significancia=True,
+        ))
     st.caption(
-        "* p ajustado < 0,05 (Benjamini–Hochberg). Vermelho indica associação negativa; "
-        "azul, positiva. Associação estatística não demonstra causalidade."
+        "Vermelho indica associação negativa; azul, positiva. "
+        "* p ajustado < 0,05 (Benjamini–Hochberg). "
+        "Associação estatística não demonstra causalidade."
     )
     with st.expander("Ver resultados numéricos das correlações"):
-        st.dataframe(dados.round(4), hide_index=True, use_container_width=True)
+        if recorte.empty:
+            st.info(f"Não há resultados numéricos de correlação para {ano}.")
+        else:
+            st.dataframe(
+                recorte.style.format(
+                    {
+                        "correlacao": formatar_coeficiente,
+                        "p_ajustado": formatar_p_ajustado,
+                    },
+                    na_rep="—",
+                ),
+                hide_index=True,
+                use_container_width=True,
+            )
+
+    with st.expander("Comparar correlações entre edições (2017–2025)"):
+        st.plotly_chart(criar_mapa_correlacoes(dados), use_container_width=True)

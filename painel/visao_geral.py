@@ -89,6 +89,8 @@ def renderizar_com_filtros(df, anos):
         df, ano, indicador_label, INDICADORES[indicador_label],
         tipo, gres_sel, mun_sel, busca,
     )
+    st.divider()
+    renderizar_correlacoes(ano)
 
 
 def renderizar(
@@ -304,7 +306,4 @@ def renderizar(
                 "Este indicador descreve o perfil da escola; "
                 "maior ou menor não significa melhor ou pior."
             )
-
-    st.divider()
-    renderizar_correlacoes()
 

@@ -1,9 +1,3 @@
-"""Página descritiva sobre oferta integral e parcial.
-
-Os três arquivos usados nesta página são resultados analíticos exportados.
-Este módulo apenas os apresenta: não refaz os pareamentos nem estima efeitos.
-"""
-
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -14,19 +8,20 @@ from painel.dados import DATA_DIR, carregar_ensino_integral_ideb
 
 COR_INTEGRAL = "#1f77b4"
 COR_PARCIAL = "#ff7f0e"
+ANOS_IDEB_OFERTA = [2017, 2019, 2023, 2025]
 
 
 ARQUIVOS_SECAO = {
     "oferta_anual.parquet": {
-        "ano", "pct_integrais", "pct_mat_integrais",
+        "ano", "total_escolas", "integrais", "parciais", "pct_integrais",
+        "pct_mat_integrais",
     },
     "ideb_por_oferta.parquet": {
         "ano", "tipo_oferta", "total_escolas", "com_ideb", "cobertura_pct",
         "media_ideb",
     },
     "testes_ideb_oferta.parquet": {
-        "ano", "n_integral", "n_parcial", "diferenca", "ic95_inferior",
-        "ic95_superior",
+        "ano", "n_integral", "n_parcial", "diferenca", "p_valor",
     },
 }
 
@@ -38,7 +33,7 @@ def _validar_arquivos_secao():
     ]
     if faltantes:
         raise FileNotFoundError(
-            "Arquivos necessários para a seção Ensino integral e IDEB ausentes: "
+            "Arquivos necessários para a seção Oferta integral plena e IDEB ausentes: "
             + ", ".join(faltantes)
         )
 
@@ -51,6 +46,12 @@ def _validar_colunas_secao(dados):
                 f"{nome} não contém as colunas esperadas: "
                 f"{', '.join(sorted(ausentes))}"
             )
+        if nome == "testes_ideb_oferta.parquet" and "IC 95%" not in quadro:
+            if not {"ic95_inferior", "ic95_superior"}.issubset(quadro.columns):
+                raise ValueError(
+                    f"{nome} precisa conter 'IC 95%' ou as colunas "
+                    "'ic95_inferior' e 'ic95_superior'."
+                )
 
 
 def _recorte_anos(quadro, anos, nome):
@@ -64,31 +65,105 @@ def _recorte_anos(quadro, anos, nome):
     return recorte
 
 
+def _formatar_diferenca(valor):
+    return f"{float(valor):+.3f}".replace(".", ",")
+
+
+def _formatar_ic95(valor):
+    if pd.isna(valor):
+        return "—"
+    try:
+        inferior, superior = str(valor).strip("[]").split(";")
+        return (
+            f"[{float(inferior.replace(',', '.')):.3f}; "
+            f"{float(superior.replace(',', '.')):.3f}]"
+        ).replace(".", ",")
+    except (AttributeError, ValueError):
+        return str(valor)
+
+
+def _formatar_p_valor(valor):
+    if pd.isna(valor):
+        return "—"
+    texto = str(valor).strip()
+    if texto.startswith("<"):
+        limite = texto[1:].strip().replace(",", ".")
+        try:
+            if float(limite) <= 0.001:
+                return "p < 0,001"
+        except ValueError:
+            pass
+        return texto.replace(".", ",")
+    try:
+        numero = float(texto.replace(",", "."))
+    except ValueError:
+        return texto
+    if numero < 0.001:
+        return "p < 0,001"
+    return f"p = {numero:.3f}".replace(".", ",")
+
+
+def _tabela_oferta_anual(oferta):
+    tabela = oferta[
+        ["ano", "total_escolas", "integrais", "pct_integrais", "parciais"]
+    ].copy()
+    tabela["Integral Plena"] = tabela.apply(
+        lambda linha: (
+            f"{int(linha['integrais'])} "
+            f"({linha['pct_integrais']:.1f}%)"
+        ).replace(".", ","),
+        axis=1,
+    )
+    tabela["Parcial ou Mista"] = tabela.apply(
+        lambda linha: (
+            f"{int(linha['parciais'])} "
+            f"({100 - linha['pct_integrais']:.1f}%)"
+        ).replace(".", ","),
+        axis=1,
+    )
+    return tabela.rename(
+        columns={
+            "ano": "Ano",
+            "total_escolas": "Total de escolas",
+        }
+    )[
+        [
+            "Ano",
+            "Total de escolas",
+            "Integral Plena",
+            "Parcial ou Mista",
+        ]
+    ]
+
+
 def _secao_expansao(oferta):
     oferta = _recorte_anos(oferta, list(range(2016, 2026)), "oferta_anual.parquet")
 
-    st.subheader("Evolução da proporção de escolas integrais (2016–2025)")
+    st.subheader("Evolução da proporção de escolas por tipo de oferta (2016–2025)")
     st.caption(
-        "A classificação considera integral a escola com 100% das "
-        "matrículas do Ensino Médio em tempo integral. O percentual de matrículas "
-        "refere-se a todas as matrículas do Ensino Médio nessas escolas, e não "
-        "necessariamente a matrículas individuais em jornada integral."
+        "Integral Plena: escolas com 100% das matrículas do Ensino Médio em "
+        "tempo integral. Parcial ou Mista: demais escolas. Os percentuais "
+        "representam a proporção de escolas em cada categoria no ano."
     )
     fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=oferta["ano"],
-            y=oferta["pct_integrais"],
-            mode="lines+markers",
-            name="Escolas classificadas como integrais",
-            line=dict(color=COR_INTEGRAL, width=3),
-            marker=dict(size=7),
-            hovertemplate=(
-                "Escolas classificadas como integrais<br>"
-                "Ano: %{x}<br>Percentual: %{y:.1f}%<extra></extra>"
+    for tipo, percentuais, cor in [
+        (TIPO_OFERTA_INTEGRAL, oferta["pct_integrais"], COR_INTEGRAL),
+        (TIPO_OFERTA_PARCIAL, 100 - oferta["pct_integrais"], COR_PARCIAL),
+    ]:
+        fig.add_trace(
+            go.Scatter(
+                x=oferta["ano"],
+                y=percentuais,
+                mode="lines+markers",
+                name=tipo,
+                line=dict(color=cor, width=3),
+                marker=dict(size=7),
+                hovertemplate=(
+                    f"{tipo}<br>"
+                    "Ano: %{x}<br>Escolas: %{y:.1f}%<extra></extra>"
+                ),
             ),
         )
-    )
     fig.update_layout(
         template="plotly_white",
         height=360,
@@ -98,8 +173,9 @@ def _secao_expansao(oferta):
             tickvals=list(range(2016, 2026)),
             title="Ano",
         ),
-        yaxis=dict(title="Percentual (%)", ticksuffix="%", rangemode="tozero"),
-        showlegend=False,
+        yaxis=dict(title="Escolas (%)", ticksuffix="%", range=[0, 100]),
+        showlegend=True,
+        legend=dict(orientation="h", y=1.08, x=0),
     )
     st.plotly_chart(fig, use_container_width=True)
     inicio = oferta.iloc[0]
@@ -113,10 +189,16 @@ def _secao_expansao(oferta):
         f"{int(fim['ano'])}. O maior valor da série foi {percentual(pico['pct_integrais'])}% "
         f"em {int(pico['ano'])}."
     )
+    with st.expander("Ver dados anuais da oferta (2016–2025)"):
+        st.dataframe(
+            _tabela_oferta_anual(oferta),
+            hide_index=True,
+            use_container_width=True,
+        )
 
 
 def _secao_ideb(ideb_oferta, testes):
-    anos_ideb = [2017, 2019, 2023, 2025]
+    anos_ideb = ANOS_IDEB_OFERTA
     ideb_oferta = ideb_oferta.loc[
         ideb_oferta["ano"].isin(anos_ideb)
         & ideb_oferta["tipo_oferta"].isin(
@@ -164,50 +246,73 @@ def _secao_ideb(ideb_oferta, testes):
         height=340,
         margin=dict(l=0, r=0, t=10, b=0),
         xaxis=dict(tickmode="array", tickvals=anos_ideb, title="Edição do IDEB"),
-        yaxis=dict(title="IDEB médio", rangemode="tozero"),
+        yaxis=dict(
+            title="IDEB médio",
+            range=[2.5, 5.0],
+            tickmode="array",
+            tickvals=[2.5, 3.0, 3.5, 4.0, 4.5, 5.0],
+            ticktext=["2,5", "3,0", "3,5", "4,0", "4,5", "5,0"],
+        ),
         legend=dict(orientation="h", y=1.08, x=0),
     )
     st.plotly_chart(fig, use_container_width=True)
 
     testes = _recorte_anos(testes, anos_ideb, "testes_ideb_oferta.parquet")
+    if "IC 95%" not in testes:
+        testes["IC 95%"] = testes.apply(
+            lambda linha: f"[{linha['ic95_inferior']}; {linha['ic95_superior']}]",
+            axis=1,
+        )
     tabela = testes[
-        ["ano", "diferenca", "ic95_inferior", "ic95_superior", "n_integral", "n_parcial"]
-    ].copy()
-    tabela["ic95"] = tabela.apply(
-        lambda linha: (
-            f"[{linha['ic95_inferior']:.2f}; {linha['ic95_superior']:.2f}]"
-        ),
-        axis=1,
-    )
-    tabela = tabela.drop(columns=["ic95_inferior", "ic95_superior"]).rename(
+        ["ano", "diferenca", "IC 95%", "n_integral", "n_parcial"]
+    ].rename(
         columns={
             "ano": "Ano",
             "diferenca": "Diferença das médias",
-            "ic95": "IC 95%",
-            "n_integral": "N escolas integral",
-            "n_parcial": "N escolas parcial",
+            "n_integral": "N Integral Plena",
+            "n_parcial": "N Parcial ou Mista",
         }
+    ).copy()
+    tabela["Diferença das médias"] = tabela["Diferença das médias"].map(
+        _formatar_diferenca
     )
+    tabela["IC 95%"] = tabela["IC 95%"].map(_formatar_ic95)
+    tabela["p-valor"] = testes["p_valor"].map(_formatar_p_valor).to_numpy()
+    tabela = tabela[
+        [
+            "Ano",
+            "Diferença das médias",
+            "IC 95%",
+            "N Integral Plena",
+            "N Parcial ou Mista",
+            "p-valor",
+        ]
+    ]
+    st.subheader("Diferença do IDEB médio entre os tipos de oferta")
+    st.caption("Diferença das médias e resultados do teste t de Welch.")
     st.dataframe(
         tabela,
         hide_index=True,
         use_container_width=True,
-        column_config={
-            "Diferença das médias": st.column_config.NumberColumn(format="%.2f"),
-        },
     )
     st.caption(
-        f"Diferença calculada como {TIPO_OFERTA_INTEGRAL} − {TIPO_OFERTA_PARCIAL}. "
-        "Interpretação: as médias "
-        "observadas foram maiores no grupo Integral nos quatro anos apresentados; "
-        "essa comparação é descritiva e não demonstra causalidade."
+        "As escolas integrais plenas apresentaram IDEB médio superior nas quatro "
+        "edições analisadas, com diferenças estatisticamente significativas pelo "
+        "teste t de Welch (p < 0,001). As comparações não demonstram causalidade, "
+        "e a composição dos grupos pode variar entre as edições."
+    )
+    st.caption(
+        "Nota metodológica: as médias consideram apenas escolas com IDEB disponível "
+        "em cada edição. O IDEB de 2021 não participa desta comparação devido à baixa "
+        "cobertura e às particularidades daquela edição. IC 95% representa o intervalo "
+        "de confiança da diferença entre as médias."
     )
 
 
 def renderizar():
-    st.header("Ensino integral e IDEB")
+    st.header("Oferta integral plena e IDEB")
     st.caption(
-        "Expansão da oferta integral e comparação descritiva do IDEB por tipo de oferta. "
+        "Evolução da oferta integral plena e parcial ou mista, com comparação do IDEB. "
         "As comparações não demonstram causalidade."
     )
     _validar_arquivos_secao()

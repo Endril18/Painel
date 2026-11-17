@@ -36,7 +36,7 @@ def carregar_caracteristicas_ideb():
 
 @st.cache_data
 def carregar_ensino_integral_ideb():
-    """Carrega os resultados exibidos na seção Ensino integral e IDEB."""
+    """Carrega os resultados da seção Oferta integral plena e IDEB."""
     oferta = pd.read_parquet(DATA_DIR / "oferta_anual.parquet")
     ideb_oferta = pd.read_parquet(DATA_DIR / "ideb_por_oferta.parquet")
     testes_ideb = pd.read_parquet(DATA_DIR / "testes_ideb_oferta.parquet")

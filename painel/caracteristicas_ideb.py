@@ -1,9 +1,3 @@
-"""Características das escolas associadas ao IDEB.
-
-Este módulo apenas apresenta resultados estatísticos já exportados. As
-correlações e os p-valores ajustados não são recalculados no Streamlit.
-"""
-
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +5,11 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from painel.barras_correlacoes import (
+    criar_lista_correlacoes,
+    formatar_coeficiente,
+    formatar_p_ajustado,
+)
 from painel.dados import DATA_DIR
 
 
@@ -21,7 +20,7 @@ CARACTERISTICAS = {
     "IN_AUDITORIO": "Auditório",
     "IN_LABORATORIO_INFORMATICA": "Laboratório de informática",
     "IN_QUADRA_ESPORTES": "Quadra esportiva",
-    "IS_INT": "Ensino médio integral",
+    "IS_INT": "Integral Plena",
 }
 CAMPOS_OBRIGATORIOS = {
     "ano",
@@ -60,6 +59,24 @@ def preparar_correlacoes(df: pd.DataFrame) -> pd.DataFrame:
     if dados.duplicated(["ano", "variavel"]).any():
         raise ValueError("Há múltiplas linhas para a mesma característica e ano.")
 
+    numericas = [
+        "n",
+        "n_com_caracteristica",
+        "pct_com_caracteristica",
+        "correlacao",
+        "p_ajustado",
+    ]
+    for coluna in numericas:
+        original = dados[coluna]
+        dados[coluna] = pd.to_numeric(original, errors="coerce")
+        if dados[coluna].isna().ne(original.isna()).any():
+            raise ValueError(f"Há valores não numéricos na coluna '{coluna}'.")
+    if (dados["correlacao"].dropna().abs() > 1).any():
+        raise ValueError("O coeficiente de correlação deve estar entre -1 e +1.")
+    if (~dados["p_ajustado"].dropna().between(0, 1)).any():
+        raise ValueError("Os p-valores ajustados precisam estar entre 0 e 1.")
+    if (~dados["pct_com_caracteristica"].dropna().between(0, 100)).any():
+        raise ValueError("Os percentuais de características precisam estar entre 0 e 100.")
     esperadas = pd.MultiIndex.from_product(
         [CARACTERISTICAS, ANOS], names=["variavel", "ano"]
     )
@@ -69,29 +86,11 @@ def preparar_correlacoes(df: pd.DataFrame) -> pd.DataFrame:
             f"São esperadas {len(esperadas)} correlações: "
             f"{len(CARACTERISTICAS)} características × {len(ANOS)} edições."
         )
-
-    numericas = [
-        "n",
-        "n_com_caracteristica",
-        "pct_com_caracteristica",
-        "correlacao",
-        "p_ajustado",
-    ]
-    for coluna in numericas:
-        dados[coluna] = pd.to_numeric(dados[coluna], errors="coerce")
-    if dados[numericas].isna().any().any():
-        raise ValueError("Há valores não numéricos ou ausentes nos resultados.")
-    if (dados["correlacao"].abs() > 1).any():
-        raise ValueError("O coeficiente de correlação deve estar entre -1 e +1.")
-    if (~dados["p_ajustado"].between(0, 1)).any():
-        raise ValueError("Os p-valores ajustados precisam estar entre 0 e 1.")
-    if (~dados["pct_com_caracteristica"].between(0, 100)).any():
-        raise ValueError("Os percentuais de características precisam estar entre 0 e 100.")
     return dados.sort_values(["variavel", "ano"], kind="stable").reset_index(drop=True)
 
 
 def _formatar_p(valor: float) -> str:
-    return "< 0,001" if valor < 0.001 else f"{valor:.3f}".replace(".", ",")
+    return formatar_p_ajustado(valor)
 
 
 def _criar_heatmap(dados: pd.DataFrame) -> go.Figure:
@@ -112,13 +111,35 @@ def _criar_heatmap(dados: pd.DataFrame) -> go.Figure:
     )
 
     rotulos = []
+    hover = []
     for variavel in CARACTERISTICAS:
-        linha = []
+        linha, linha_hover = [], []
         for ano in ANOS:
-            valor = float(coef.loc[variavel, ano])
+            valor = coef.loc[variavel, ano]
+            if pd.isna(valor):
+                linha.append("—")
+                linha_hover.append(
+                    f"<b>{CARACTERISTICAS[variavel]}</b><br>Edição: {ano}"
+                    "<br>Sem resultado<extra></extra>"
+                )
+                continue
             marca = "*" if p_adj.loc[variavel, ano] < 0.05 else ""
-            linha.append(f"{valor:.3f}{marca}".replace(".", ","))
+            coeficiente = formatar_coeficiente(valor)
+            percentual = f"{pct_caracteristica.loc[variavel, ano]:.1f}%".replace(
+                ".", ","
+            )
+            linha.append(f"{coeficiente}{marca}")
+            linha_hover.append(
+                f"<b>{CARACTERISTICAS[variavel]}</b><br>Edição: {ano}"
+                f"<br>Ponto-bisserial: {coeficiente}"
+                f"<br>Escolas analisadas: {int(qtd.loc[variavel, ano])}"
+                f"<br>Com característica: {int(qtd_caracteristica.loc[variavel, ano])}"
+                f"<br>Percentual: {percentual}"
+                f"<br>p ajustado (BH): {_formatar_p(p_adj.loc[variavel, ano])}"
+                "<extra></extra>"
+            )
         rotulos.append(linha)
+        hover.append(linha_hover)
 
     customdata = np.stack(
         [
@@ -141,14 +162,8 @@ def _criar_heatmap(dados: pd.DataFrame) -> go.Figure:
             text=rotulos,
             texttemplate="%{text}",
             customdata=customdata,
-            hovertemplate=(
-                "%{y}<br>Edição: %{x}"
-                "<br>Ponto-bisserial: %{z:.3f}"
-                "<br>Escolas analisadas: %{customdata[0]:.0f}"
-                "<br>Com característica: %{customdata[1]:.0f}"
-                "<br>Percentual: %{customdata[2]:.1f}%"
-                "<br>p ajustado (BH): %{customdata[3]:.3g}<extra></extra>"
-            ),
+            hovertext=hover,
+            hovertemplate="%{hovertext}",
             colorbar=dict(title="r", len=0.7),
         )
     )
@@ -162,14 +177,12 @@ def _criar_heatmap(dados: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def _tabela_detalhes(dados: pd.DataFrame) -> pd.DataFrame:
-    detalhes = dados.copy()
+def _tabela_detalhes(dados: pd.DataFrame, ano: int) -> pd.DataFrame:
+    detalhes = _ordenar_correlacoes(dados, ano).copy()
     detalhes["Característica"] = detalhes["variavel"].map(CARACTERISTICAS)
-    detalhes["Coeficiente"] = detalhes["correlacao"].map(
-        lambda valor: f"{valor:.3f}".replace(".", ",")
-    )
+    detalhes["Coeficiente"] = detalhes["correlacao"].map(formatar_coeficiente)
     detalhes["% com característica"] = detalhes["pct_com_caracteristica"].map(
-        lambda valor: f"{valor:.1f}%".replace(".", ",")
+        lambda valor: "—" if pd.isna(valor) else f"{valor:.1f}%".replace(".", ",")
     )
     detalhes["p ajustado"] = detalhes["p_ajustado"].map(_formatar_p)
     return detalhes.rename(
@@ -188,14 +201,58 @@ def _tabela_detalhes(dados: pd.DataFrame) -> pd.DataFrame:
             "% com característica",
             "p ajustado",
         ]
-    ].sort_values(["Característica", "Ano"], kind="stable")
+    ]
 
 
-def _interpretacao():
-    st.caption(
-        "Essas correlações descrevem associações estaduais históricas e não demonstram "
-        "que uma característica cause aumento ou redução do IDEB."
+def _ordenar_correlacoes(dados: pd.DataFrame, ano: int) -> pd.DataFrame:
+    """Ordena a edição pela intensidade absoluta da correlação."""
+    recorte = dados.loc[
+        (dados["ano"] == ano) & dados["correlacao"].notna(),
+        [
+            "ano",
+            "variavel",
+            "n",
+            "n_com_caracteristica",
+            "pct_com_caracteristica",
+            "correlacao",
+            "p_ajustado",
+        ],
+    ].copy()
+
+    return recorte.sort_values(
+        "correlacao",
+        key=lambda valores: valores.abs(),
+        ascending=False,
+        kind="stable",
+    ).reset_index(drop=True)
+
+
+def _criar_lista_correlacoes(dados: pd.DataFrame) -> str:
+    return criar_lista_correlacoes(
+        dados.assign(nome=dados["variavel"].map(CARACTERISTICAS)),
+        mostrar_significancia=True,
     )
+
+
+def _selecionar_ano() -> int:
+    controle_ano = getattr(st, "segmented_control", None)
+    if controle_ano is not None:
+        return int(controle_ano(
+            "Ano de referência",
+            options=ANOS,
+            default=2025,
+            format_func=str,
+            key="caracteristicas_ideb_ano",
+        ))
+    else:
+        return int(st.radio(
+            "Ano de referência",
+            options=ANOS,
+            index=ANOS.index(2025),
+            format_func=str,
+            horizontal=True,
+            key="caracteristicas_ideb_ano",
+        ))
 
 
 def renderizar():
@@ -219,23 +276,38 @@ def renderizar():
         st.error(f"Não foi possível ler as correlações: {erro}")
         return
 
-    st.subheader(
-        "Características do Censo Escolar associadas ao IDEB "
-        "(2017, 2019, 2023 e 2025)"
-    )
-    st.plotly_chart(_criar_heatmap(dados), use_container_width=True)
+    st.subheader("Características escolares associadas ao IDEB (2017–2025)")
     st.caption(
-        "Vermelho indica associação negativa; azul, positiva; tons neutros indicam "
-        "valores próximos de zero. Coeficientes positivos indicam associação com "
-        "IDEB maior nas escolas que possuem a característica; negativos, com IDEB "
-        "menor. * p-valor ajustado < 0,05 (Benjamini–Hochberg)."
+        "Associação ponto-bisserial entre o IDEB e características escolares binárias "
+        "por edição. Os resultados representam o conjunto estadual; os demais filtros "
+        "não alteram as correlações."
     )
 
-    _interpretacao()
-
-    with st.expander("Ver detalhes estatísticos"):
-        st.dataframe(
-            _tabela_detalhes(dados),
-            hide_index=True,
-            use_container_width=True,
+    ano = _selecionar_ano()
+    recorte = _ordenar_correlacoes(dados, ano)
+    if recorte.empty:
+        st.info("Não há coeficientes disponíveis para a edição selecionada.")
+    else:
+        st.caption(
+            f"Edição {ano} · Características ordenadas pela intensidade absoluta "
+            "da correlação."
         )
+        st.html(_criar_lista_correlacoes(recorte))
+    st.caption(
+        "Vermelho indica associação negativa; azul, positiva. "
+        "* p ajustado < 0,05 (Benjamini–Hochberg). "
+        "Associação estatística não demonstra causalidade."
+    )
+
+    with st.expander("Ver resultados numéricos das correlações"):
+        if recorte.empty:
+            st.info(f"Não há resultados numéricos de correlação para {ano}.")
+        else:
+            st.dataframe(
+                _tabela_detalhes(dados, ano),
+                hide_index=True,
+                use_container_width=True,
+            )
+
+    with st.expander("Comparar correlações entre edições (2017–2025)"):
+        st.plotly_chart(_criar_heatmap(dados), use_container_width=True)

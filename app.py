@@ -35,8 +35,11 @@ def pagina_caracteristicas_ideb():
 
 
 def pagina_escola():
-    st.header("Escola")
-    st.caption("Busque uma escola para consultar sua ficha, o histórico e a comparação com a rede.")
+    st.header("Histórico por escola")
+    st.caption(
+        "Consulte a evolução dos indicadores de uma escola e compare seus resultados "
+        "com as medianas da GRE e da rede estadual."
+    )
     renderizar_escola(df, anos)
 
 
@@ -51,7 +54,7 @@ pagina_visao_geral_nav = st.Page(
 )
 pagina_integral_parcial_nav = st.Page(
     pagina_integral_parcial,
-    title="Ensino integral e IDEB",
+    title="Oferta integral plena e IDEB",
     url_path="integral-parcial",
 )
 pagina_caracteristicas_ideb_nav = st.Page(
@@ -59,11 +62,11 @@ pagina_caracteristicas_ideb_nav = st.Page(
     title="Características das escolas e IDEB",
     url_path="caracteristicas-ideb",
 )
-pagina_escola_nav = st.Page(pagina_escola, title="Escola", url_path="escola")
+pagina_escola_nav = st.Page(pagina_escola, title="Histórico por escola", url_path="escola")
 
 paginas_navegacao = {
-    "visao_geral": pagina_visao_geral_nav,
     "integral_parcial": pagina_integral_parcial_nav,
+    "visao_geral": pagina_visao_geral_nav,
     "caracteristicas_ideb": pagina_caracteristicas_ideb_nav,
     "escola": pagina_escola_nav,
 }
@@ -71,8 +74,8 @@ paginas_navegacao = {
 pagina = st.navigation(
     [
         pagina_inicio_nav,
-        pagina_visao_geral_nav,
         pagina_integral_parcial_nav,
+        pagina_visao_geral_nav,
         pagina_caracteristicas_ideb_nav,
         pagina_escola_nav,
     ],
@@ -82,8 +85,10 @@ pagina.run()
 
 st.divider()
 st.caption(
-    "**Fontes e critério de oferta:** escolas estaduais que ofertam Ensino Médio. "
-    "Fonte: INEP (Censo Escolar, IDEB, taxas de rendimento e indicadores educacionais). "
-    "A escola é classificada como integral quando 100% das matrículas do "
-    "Ensino Médio são em tempo integral."
+    "**Sobre os dados:** O painel reúne informações do INEP (Censo Escolar, IDEB, "
+    "taxas de rendimento e indicadores educacionais) sobre as escolas estaduais da "
+    "Paraíba que ofertam Ensino Médio, de 2016 a 2025. Neste estudo, são "
+    "classificadas como **Integral Plena** as escolas com 100% das matrículas do "
+    "Ensino Médio em tempo integral; as demais são classificadas como **Parcial ou "
+    "Mista**."
 )

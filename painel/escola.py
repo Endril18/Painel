@@ -1,20 +1,16 @@
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
 from painel.config import (
     ANOS_IDEB,
-    COMPARACAO,
     COR_ESCOLA,
     COR_GRE,
     COR_REDE,
-    FICHA,
     INDICADORES,
     LOCALIZACAO,
     METAS_IDEB,
 )
-from painel.dados import formatar
 
 
 def renderizar(df, anos):
@@ -36,18 +32,25 @@ def renderizar(df, anos):
         placeholder="Nome da escola ou município",
     )
     if cod is None:
-        st.info("Selecione uma escola para ver a ficha, o histórico e a comparação com a rede.")
+        st.info(
+            "Selecione uma escola para consultar seu histórico e compará-lo "
+            "com as medianas da GRE e da rede estadual."
+        )
         return
 
     hist = df[df["CO_ENTIDADE"] == cod].sort_values("NU_ANO_CENSO")
     esc = hist.iloc[-1]
     gre = esc["GRE"]
+    registros_oferta = hist.loc[hist["TIPO_OFERTA"].notna()]
+    registro_oferta = registros_oferta.iloc[-1] if not registros_oferta.empty else esc
+    tipo_oferta = registro_oferta["TIPO_OFERTA"]
+    ano_oferta = int(registro_oferta["NU_ANO_CENSO"])
 
     st.subheader(esc["NO_ENTIDADE"])
     loc = LOCALIZACAO.get(int(esc["TP_LOCALIZACAO"]), "") if pd.notna(esc["TP_LOCALIZACAO"]) else ""
     st.markdown(
         f"**{esc['NO_MUNICIPIO']}** · {gre}" + (f" · Zona {loc.lower()}" if loc else "")
-        + f" · {esc['TIPO_OFERTA']}"
+        + f" · {tipo_oferta} ({ano_oferta})"
     )
     anos_escola = sorted(hist["NU_ANO_CENSO"].unique())
     if anos_escola[-1] < ano_max:
@@ -56,42 +59,10 @@ def renderizar(df, anos):
             f"Dados disponíveis de {anos_escola[0]} a {anos_escola[-1]}."
         )
 
-    st.subheader("Ficha da escola")
-    ano_f = st.selectbox(
-        "Ano da ficha",
-        anos_escola,
-        index=len(anos_escola) - 1,
-        key="ano_ficha",
-    )
-    linha = hist[hist["NU_ANO_CENSO"] == ano_f].iloc[0]
-    ref_ano = df[df["NU_ANO_CENSO"] == ano_f]
-    st.caption(
-        f"Em cada item, a mediana da rede estadual em {ano_f} aparece abaixo do valor."
-    )
-    cols = st.columns(3)
-    for i, (rot, col, un, casas) in enumerate(FICHA):
-        with cols[i % 3]:
-            st.metric(rot, formatar(linha[col], un, casas))
-            st.caption(f"Rede: {formatar(ref_ano[col].median(), un, casas)}")
-    eja = linha["IN_EJA"]
-    if pd.isna(eja):
-        st.caption("Informação sobre EJA indisponível para esta escola.")
-    elif float(eja) == 1:
-        st.caption("Oferece EJA no Ensino Médio")
-    else:
-        st.caption("Sem EJA no Ensino Médio")
-
     st.divider()
     st.subheader("Histórico (2016–2025)")
     ind_label = st.selectbox("Indicador", list(INDICADORES.keys()), key="ind_hist")
     ind_col, ind_unidade, _, ind_ideb = INDICADORES[ind_label]
-    tipo_grafico = st.radio(
-        "Visualização",
-        ["Barras agrupadas", "Linhas"],
-        horizontal=True,
-        index=0,
-        key="tipo_grafico_historico",
-    )
 
     anos_historico = [
         ano for ano in (ANOS_IDEB if ind_col == "IDEB" else anos) if ano in anos
@@ -108,43 +79,26 @@ def renderizar(df, anos):
     )
 
     series_historico = [
-        (esc["NO_ENTIDADE"], serie_escola, COR_ESCOLA, "solid"),
-        (f"Mediana da {gre}", serie_gre, COR_GRE, "dash"),
-        ("Mediana da rede estadual", serie_rede, COR_REDE, "dot"),
+        (esc["NO_ENTIDADE"], serie_escola, COR_ESCOLA),
+        (f"Mediana da {gre}", serie_gre, COR_GRE),
+        ("Mediana da rede estadual", serie_rede, COR_REDE),
     ]
 
     fh = go.Figure()
-    for nome, serie, cor, dash in series_historico:
-        if tipo_grafico == "Linhas":
-            fh.add_trace(
-                go.Scatter(
-                    x=anos_historico,
-                    y=serie.values,
-                    mode="lines+markers",
-                    name=nome,
-                    line=dict(
-                        color=cor, dash=dash, width=3 if cor == COR_ESCOLA else 2
-                    ),
-                    connectgaps=True,
-                    hovertemplate=(
-                        f"%{{x}}<br>{nome}: %{{y:.1f}}{ind_unidade}<extra></extra>"
-                    ),
-                )
+    for nome, serie, cor in series_historico:
+        serie_com_dado = serie.dropna()
+        fh.add_trace(
+            go.Bar(
+                x=serie_com_dado.index,
+                y=serie_com_dado.values,
+                name=nome,
+                marker_color=cor,
+                offsetgroup=nome,
+                hovertemplate=(
+                    f"%{{x}}<br>{nome}: %{{y:.1f}}{ind_unidade}<extra></extra>"
+                ),
             )
-        else:
-            serie_com_dado = serie.dropna()
-            fh.add_trace(
-                go.Bar(
-                    x=serie_com_dado.index,
-                    y=serie_com_dado.values,
-                    name=nome,
-                    marker_color=cor,
-                    offsetgroup=nome,
-                    hovertemplate=(
-                        f"%{{x}}<br>{nome}: %{{y:.1f}}{ind_unidade}<extra></extra>"
-                    ),
-                )
-            )
+        )
     if ind_col == "IDEB":
         ref_ideb = METAS_IDEB.get(max(anos), 4.4)
         fh.add_hline(
@@ -153,9 +107,7 @@ def renderizar(df, anos):
             line_color="#999",
             annotation_text=f"Referência {str(ref_ideb).replace('.', ',')}",
         )
-    eixo_y = dict(title=ind_label, ticksuffix=ind_unidade)
-    if tipo_grafico == "Barras agrupadas":
-        eixo_y["rangemode"] = "tozero"
+    eixo_y = dict(title=ind_label, ticksuffix=ind_unidade, rangemode="tozero")
     fh.update_layout(
         template="plotly_white",
         height=380,
@@ -163,93 +115,29 @@ def renderizar(df, anos):
         xaxis=dict(dtick=1, title=None),
         yaxis=eixo_y,
         legend=dict(orientation="h", y=-0.2),
+        barmode="group",
     )
-    if tipo_grafico == "Barras agrupadas":
-        fh.update_layout(barmode="group")
 
     st.plotly_chart(fh, use_container_width=True)
+    anos_sem_dado = serie_escola.index[serie_escola.isna()].tolist()
+    if anos_sem_dado:
+        st.caption(
+            "Escola sem informação para este indicador em: "
+            + ", ".join(map(str, anos_sem_dado))
+            + ". As medianas da GRE e da rede são exibidas quando disponíveis; "
+            "a ausência de informação da escola não representa valor zero."
+        )
     if serie_escola.notna().sum() == 0:
         st.caption("A escola não tem dado deste indicador em nenhum ano.")
-    elif ind_ideb and tipo_grafico == "Linhas":
-        st.caption(
-            "Este indicador só existe nos anos de aplicação do IDEB "
-            "(2017, 2019, 2021, 2023, 2025); as linhas ligam os anos com dado. "
-        )
     elif ind_ideb:
         st.caption(
             "Este indicador só existe nos anos de aplicação do IDEB "
             "(2017, 2019, 2021, 2023, 2025)."
         )
-    elif tipo_grafico == "Barras agrupadas":
+    else:
         st.caption("As barras aparecem somente nos anos com dado para cada série.")
-
-    st.divider()
-    st.subheader(f"Escola, GRE e REDE — {ano_f}")
-    ref_gre = ref_ano[ref_ano["GRE"] == gre]
-    linhas = []
-    for rot in COMPARACAO:
-        col, _, _, _ = INDICADORES[rot]
-        linhas.append(
-            {
-                "Indicador": rot,
-                "Escola": linha[col],
-                f"Mediana da {gre}": ref_gre[col].median(),
-                "Mediana da rede": ref_ano[col].median(),
-            }
+    if ind_col == "IDEB":
+        st.caption(
+            "Os resultados do IDEB de 2021 devem ser interpretados com cautela "
+            "devido à baixa cobertura daquela edição."
         )
-    comp = pd.DataFrame(linhas)
-    st.dataframe(
-        comp.style.format(
-            {
-                c: (
-                    lambda v: "sem dado"
-                    if pd.isna(v)
-                    else f"{v:.1f}".replace(".", ",")
-                )
-                for c in comp.columns[1:]
-            }
-        ),
-        hide_index=True,
-        use_container_width=True,
-    )
-    st.caption(
-        f"Medianas calculadas entre as escolas estaduais com dado no ano "
-        f"({len(ref_gre)} escolas na {gre}, {len(ref_ano)} na rede). "
-        "Para taxas de reprovação, abandono, distorção idade-série e esforço "
-        "docente, valores menores indicam melhor situação."
-    )
-
-    st.divider()
-    st.subheader("Taxas de rendimento da escola")
-    tx = hist[
-        ["NU_ANO_CENSO", "TX_APROV_MED", "TX_REPROV_MED", "TX_ABAND_MED"]
-    ].melt(id_vars="NU_ANO_CENSO", var_name="Taxa", value_name="Percentual")
-    tx["Taxa"] = tx["Taxa"].map(
-        {
-            "TX_APROV_MED": "Aprovação",
-            "TX_REPROV_MED": "Reprovação",
-            "TX_ABAND_MED": "Abandono",
-        }
-    )
-    ft = px.line(
-        tx,
-        x="NU_ANO_CENSO",
-        y="Percentual",
-        color="Taxa",
-        markers=True,
-        color_discrete_map={
-            "Aprovação": "#2ca02c",
-            "Reprovação": "#d62728",
-            "Abandono": "#9467bd",
-        },
-        labels={"NU_ANO_CENSO": ""},
-    )
-    ft.update_layout(
-        template="plotly_white",
-        height=320,
-        margin=dict(l=0, r=0, t=10, b=0),
-        xaxis=dict(dtick=1),
-        legend=dict(orientation="h", y=-0.2),
-    )
-
-    st.plotly_chart(ft, use_container_width=True)
