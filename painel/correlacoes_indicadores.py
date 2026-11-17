@@ -71,6 +71,29 @@ def _p_formatado(p: float) -> str:
     return formatar_p_ajustado(p)
 
 
+def _tabela_resultados(recorte: pd.DataFrame) -> pd.DataFrame:
+    tabela = recorte.rename(
+        columns={
+            "ano": "Ano",
+            "indicador": "Indicador",
+            "n": "Escolas analisadas",
+            "correlacao": "Coeficiente",
+            "p_ajustado": "p ajustado",
+        }
+    ).copy()
+    tabela["Coeficiente"] = tabela["Coeficiente"].map(formatar_coeficiente)
+    tabela["p ajustado"] = tabela["p ajustado"].map(formatar_p_ajustado)
+    return tabela[
+        [
+            "Ano",
+            "Indicador",
+            "Escolas analisadas",
+            "Coeficiente",
+            "p ajustado",
+        ]
+    ]
+
+
 def criar_mapa_correlacoes(df: pd.DataFrame) -> go.Figure:
     dados = preparar_correlacoes(df)
 
@@ -180,17 +203,7 @@ def renderizar(ano: int):
         if recorte.empty:
             st.info(f"Não há resultados numéricos de correlação para {ano}.")
         else:
-            st.dataframe(
-                recorte.style.format(
-                    {
-                        "correlacao": formatar_coeficiente,
-                        "p_ajustado": formatar_p_ajustado,
-                    },
-                    na_rep="—",
-                ),
-                hide_index=True,
-                use_container_width=True,
-            )
+            st.dataframe(_tabela_resultados(recorte), hide_index=True, use_container_width=True)
 
     with st.expander("Comparar correlações entre edições (2017–2025)"):
         st.plotly_chart(criar_mapa_correlacoes(dados), use_container_width=True)
