@@ -20,6 +20,7 @@ CARACTERISTICAS = {
     "IN_AUDITORIO": "Auditório",
     "IN_LABORATORIO_INFORMATICA": "Laboratório de informática",
     "IN_QUADRA_ESPORTES": "Quadra esportiva",
+    "IN_REFEITORIO": "Refeitório",
     "IS_INT": "Integral Plena",
 }
 CAMPOS_OBRIGATORIOS = {

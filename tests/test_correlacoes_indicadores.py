@@ -119,7 +119,12 @@ class CorrelacoesIndicadoresTest(unittest.TestCase):
         ).run()
         self.sem_erros(app)
         self.assertEqual(len(app.get("html")), 1)
-        self.assertEqual(app.get("html")[0].proto.body.count('class="correlacao-item"'), 6)
+        self.assertEqual(app.get("html")[0].proto.body.count('class="correlacao-item"'), 7)
+        self.assertIn("Refeitório", app.get("html")[0].proto.body)
+        self.assertIn(
+            "Refeitório",
+            expansor(app, NUMERICOS).dataframe[0].value["Característica"].tolist(),
+        )
         self.assertEqual(len(app.get("plotly_chart")), 1)
 
 
