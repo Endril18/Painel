@@ -297,7 +297,6 @@ def renderizar():
     st.caption(
         "Vermelho indica associação negativa; azul, positiva. "
         "* p ajustado < 0,05 (Benjamini–Hochberg). "
-        "Associação estatística não demonstra causalidade."
     )
 
     with st.expander("Ver resultados numéricos das correlações"):
