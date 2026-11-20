@@ -287,7 +287,10 @@ def renderizar(
                 coluna: indicador_label,
             }
         )
-        cfg = {indicador_label: st.column_config.NumberColumn(format="%.2f")}
+        cfg = {
+            "Escola": st.column_config.TextColumn(width=250),
+            indicador_label: st.column_config.NumberColumn(format="%.2f"),
+        }
         st.dataframe(
             tabela_base.sort_values(
                 indicador_label,
