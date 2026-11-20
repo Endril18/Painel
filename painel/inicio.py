@@ -50,3 +50,12 @@ def renderizar(df, paginas, escolas=None):
                         use_container_width=True,
                     )
 
+    st.divider()
+    st.caption(
+        "**Sobre os dados:** O painel reúne informações do INEP (Censo Escolar, IDEB, "
+        "taxas de rendimento e indicadores educacionais) sobre as escolas estaduais da "
+        "Paraíba que ofertam Ensino Médio, de 2016 a 2025. Neste estudo, são "
+        "classificadas como **Integral Plena** as escolas com 100% das matrículas do "
+        "Ensino Médio em tempo integral; as demais são classificadas como **Parcial ou "
+        "Mista**."
+    )
