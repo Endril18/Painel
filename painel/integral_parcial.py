@@ -166,8 +166,8 @@ def _secao_expansao(oferta):
         )
     fig.update_layout(
         template="plotly_white",
-        height=360,
-        margin=dict(l=0, r=0, t=10, b=0),
+        height=410,
+        margin=dict(l=0, r=0, t=60, b=0),
         xaxis=dict(
             tickmode="array",
             tickvals=list(range(2016, 2026)),
@@ -175,7 +175,7 @@ def _secao_expansao(oferta):
         ),
         yaxis=dict(title="Escolas (%)", ticksuffix="%", range=[0, 100]),
         showlegend=True,
-        legend=dict(orientation="h", y=1.08, x=0),
+        legend=dict(orientation="h", y=1.08, yanchor="bottom", x=0, xanchor="left"),
     )
     st.plotly_chart(fig, use_container_width=True)
     inicio = oferta.iloc[0]
