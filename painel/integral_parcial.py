@@ -18,7 +18,7 @@ ARQUIVOS_SECAO = {
     },
     "ideb_por_oferta.parquet": {
         "ano", "tipo_oferta", "total_escolas", "com_ideb", "cobertura_pct",
-        "media_ideb",
+        "media_ideb", "ic95_inferior", "ic95_superior",
     },
     "testes_ideb_oferta.parquet": {
         "ano", "n_integral", "n_parcial", "diferenca", "p_valor",
@@ -232,9 +232,25 @@ def _secao_ideb(ideb_oferta, testes):
                 name=tipo,
                 line=dict(color=cor, width=3),
                 marker=dict(size=8),
-                customdata=serie[["com_ideb", "total_escolas", "cobertura_pct"]],
+                error_y=dict(
+                    type="data",
+                    array=serie["ic95_superior"] - serie["media_ideb"],
+                    arrayminus=serie["media_ideb"] - serie["ic95_inferior"],
+                    visible=True,
+                    color=cor,
+                ),
+                customdata=serie[
+                    [
+                        "com_ideb",
+                        "total_escolas",
+                        "cobertura_pct",
+                        "ic95_inferior",
+                        "ic95_superior",
+                    ]
+                ],
                 hovertemplate=(
                     f"{tipo}<br>Ano: %{{x}}<br>IDEB médio: %{{y:.2f}}"
+                    "<br>IC 95%: [%{customdata[3]:.2f}; %{customdata[4]:.2f}]"
                     "<br>N com IDEB: %{customdata[0]}"
                     "<br>Cobertura: %{customdata[2]:.2f}% (%{customdata[0]} de "
                     "%{customdata[1]})<extra></extra>"
@@ -256,6 +272,7 @@ def _secao_ideb(ideb_oferta, testes):
         legend=dict(orientation="h", y=1.08, x=0),
     )
     st.plotly_chart(fig, use_container_width=True)
+    st.caption("As barras de erro representam os intervalos de confiança de 95% das médias.")
 
     testes = _recorte_anos(testes, anos_ideb, "testes_ideb_oferta.parquet")
     if "IC 95%" not in testes:
